@@ -1,0 +1,474 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 3"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## Some (bonus) plotting
+```
+
+<br>
+
+::: fragment
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+:::
+
+# [Recap]{style="color:#ff2c2d;"}: What did we cover last week?
+
+## EXAMPLE 1: Find 10 most successful males
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3|4-6|7-8|9"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         #Determine the rank of males based on reproductive success
+         #Largest RS is ranked 1
+         rank = dense_rank(-RS)) %>%
+  #Filter top 10 ranked males (allows for ties)
+  filter(rank %in% 1:10) %>% 
+  arrange(rank)
+```
+
+## EXAMPLE 2: Find clan that produces most successful males on average
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3|4|5|6-9"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  filter(birth.clan %in% find_clan_name.all(main.clans = TRUE)) %>% 
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS),
+            maxRS = max(RS)) %>% 
+  arrange(desc(meanRS))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "1-2|4-5|7-10|12-14|16-17"
+## Do the same thing with `create_id_starting table()`
+create_id_starting.table(
+  
+  ## Select all males..
+  sex = "male",
+  
+  ## Only during the observation period
+  ## (rather than from first estimated birth or conception)
+  from = find_pop_date.observation.first(),
+  to = find_pop_date.observation.last(),
+  
+  ## Males that 'started being cubs' during our focal period
+  ## i.e. they were born during this time
+  lifestage = "cub", lifestage.overlap = "start",
+  
+  ## Only individuals born into main clans
+  clan = find_clan_name.all(main.clans = TRUE)
+  
+)
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "1-4|5-7|9-10|11-12"
+# Extract data 'manually' without `create_id_starting.table()` arguments
+create_id_starting.table(
+  sex = "male"
+) %>% 
+  #Extract birth date and birth clan
+  mutate(birth.date = fetch_id_date.birth(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  filter(
+    #Filter individuals born after study started (i.e. non left censored)
+    birth.date > find_pop_date.observation.first(),
+    #Filter individuals born in main clans
+    birth.clan %in% find_clan_name.all(main.clans = TRUE))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3|4|5-6|7-9"
+create_id_starting.table(sex = "male", lifestage = "cub", clan = find_clan_name.all(main.clans = TRUE), lifestage.overlap = "start", from = find_pop_date.observation.first(), to = find_pop_date.observation.last()) %>% 
+  filter(!fetch_id_is.censored.right(ID = ID)) %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID, age.mature = 6, unit = "months"),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS)) %>% 
+  arrange(desc(meanRS))
+```
+
+# [Recap]{style="color:#ff2c2d;"}: Any questions after last week?
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+<br>
+
+### GOAL 1: `create_id_starting.table()`
+
+<br>
+
+### GOAL 2: `fetch_id_rank()`
+
+<br>
+
+### GOAL 3: `reshape_row_date.seq()` 
+
+# [TASK:]{style="color:#ff2c2d;"} Rank of females
+
+## EXAMPLE 1: Hierarchy of Airstrip females {auto-animate="true"}
+
+We want all females in Airstrip on a single date
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|4-5|7-8|10-11"
+# Extract all within `create_id_starting.table()`
+create_id_starting.table(
+  
+  ## Select all females..
+  sex = "female",
+  
+  ## In Airstrip...
+  clan = "A",
+  
+  ## On this date...
+  at = "2007-01-01"
+  
+)
+```
+
+## EXAMPLE 1: Hierarchy of Airstrip females {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7|8|9|11-12|14-15"
+# Extract data 'manually' without using `create_id_starting.table()` arguments
+
+#Return all individuals (no filtering)
+create_id_starting.table() %>% 
+  
+  #Extract variables for filtering...
+  mutate(sex = fetch_id_sex(ID = ID),
+         alive = fetch_id_is.alive(ID = ID, at = "2007-01-01"),
+         clan = fetch_id_clan.current(ID = ID, at = "2007-01-01")) %>% 
+  
+  #Filter to just return Airstrip females alive on 2007-01-01
+  filter(sex == "female" & alive & clan == "A") %>% 
+  
+  #Remove filtering columns
+  select(ID)
+```
+
+## EXAMPLE 1: Hierarchy of Airstrip females {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "7-8"
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  at = "2007-01-01"
+) %>% 
+  
+  #Find rank of each female (only among females)
+  mutate(rank = fetch_id_rank.sex(ID = ID, at = "2007-01-01"))
+```
+
+## EXAMPLE 1: Hierarchy of Airstrip females {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-9"
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  at = "2007-01-01"
+) %>% 
+  mutate(rank = fetch_id_rank.sex(ID = ID, at = "2007-01-01")) %>% 
+  
+  #Arrange to show alpha on top
+  arrange(rank)
+```
+
+# [TASK:]{style="color:#ff2c2d;"} Rank of females
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+We want all females alive in Airstrip over a year
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7|9-10|12-13"
+create_id_starting.table(
+  
+  ## Select all females..
+  sex = "female",
+  
+  ## In Airstrip...
+  clan = "A",
+  
+  ## During all of 2007...
+  from = "2007-01-01", to = "2008-01-01",
+  
+  #Individuals were alive this whole period (alive = !dead)
+  lifestage = "!dead", lifestage.overlap = "always" 
+)
+```
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+create_id_starting.table(
+  
+  ## Select all females..
+  sex = "female",
+  
+  ## In Airstrip...
+  clan = "A",
+  
+  ## During all of 2007...
+  from = "2007-01-01", to = "2008-01-01",
+  
+  #Individuals were alive this whole period (alive = !dead)
+  lifestage = "!dead", lifestage.overlap = "always" 
+  
+)
+```
+
+::: callout-caution
+### WARNING
+
+This has a bug in the {drat} version, but I am fixing it!!
+:::
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7|8|9|10|12-13|15-16"
+# Extract data 'manually' without using `create_id_starting.table()` arguments
+
+#Return all individuals (no filtering)
+create_id_starting.table() %>% 
+  
+  #Extract variables for filtering...
+  mutate(sex = fetch_id_sex(ID = ID),
+         alive_07 = fetch_id_is.alive(ID = ID, at = "2007-01-01"),
+         alive_08 = fetch_id_is.alive(ID = ID, at = "2008-01-01"),
+         clan = fetch_id_clan.current(ID = ID, at = "2007-01-01")) %>% 
+  
+  #Filter to just return Airstrip females alive on 2007-01-01
+  filter(sex == "female" & alive_07 & alive_08 & clan == "A") %>% 
+  
+  #Remove filtering columns
+  select(ID)
+```
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-10"
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  from = "2007-01-01", to = "2008-01-01",
+  lifestage = "!dead", lifestage.overlap = "always" 
+)  %>% 
+  
+  #Expand our data to include multiple dates for each female
+  reshape_row_date.seq(ID, from = "2007-01-01", to = "2008-01-01",
+                       by = "year")
+```
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "10-11"
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  from = "2007-01-01", to = "2008-01-01",
+  lifestage = "!dead", lifestage.overlap = "always" 
+)  %>% 
+  reshape_row_date.seq(ID, from = "2007-01-01", to = "2008-01-01",
+                       by = "year") %>% 
+  
+  #Extract (standardised) rank information for each female on each date
+  mutate(rank = fetch_id_rank.sex.std(ID = ID, at = date))
+```
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "11-12|13-14|15"
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  from = "2007-01-01", to = "2008-01-01",
+  lifestage = "!dead", lifestage.overlap = "always" 
+)  %>% 
+  reshape_row_date.seq(ID, from = "2007-01-01", to = "2008-01-01",
+                       by = "year") %>% 
+  mutate(rank = fetch_id_rank.sex.std(ID = ID, at = date)) %>% 
+  
+  #Group by/summarise to see how individual ranks changed over the year
+  group_by(ID) %>% 
+  ## first() and last() are dplyr functions. Useful with group_by()
+  summarise(rank_change = last(rank) - first(rank)) %>% 
+  arrange(rank_change)
+```
+
+## EXAMPLE 2: Change in female rank {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|8|12-15|16"
+## TIP: DEFINE REPEATED VALUES ONCE
+start_date <- "2007-01-01"
+end_date   <- "2008-01-01"
+
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  from = start_date, to = end_date,
+  lifestage = "!dead", lifestage.overlap = "always" 
+)  %>% 
+  
+  #Quicker way!
+  mutate(start_rank = fetch_id_rank.sex.std(ID = ID, at = start_date),
+         end_rank = fetch_id_rank.sex.std(ID = ID, at = end_date),
+         rank_change = end_rank - start_rank) %>% 
+  arrange(rank_change)
+```
+
+# [TASK:]{style="color:#ff2c2d;"} Rank of females
+
+## BONUS: Plotting rank change over time {auto-animate="true"}
+
+We want all females that were alive in Shamba for at least 1 day
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3|5-6|8-9"
+create_id_starting.table(
+  sex = "female",
+  clan = "S",
+  
+  ## During this period...
+  from = "2000-01-01", to = "2002-01-01",
+  
+  #Individuals could be alive at any point
+  lifestage = "!dead", lifestage.overlap = "any" 
+)
+```
+
+## BONUS: Plotting rank change over time {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-10"
+create_id_starting.table(
+  sex = "female",
+  clan = "S",
+  from = "2000-01-01", to = "2002-01-01",
+  lifestage = "!dead", lifestage.overlap = "any" 
+)  %>% 
+  
+  #Expand our data to include multiple dates for each female
+  reshape_row_date.seq(ID, from = "2000-01-01", to = "2002-01-01",
+                       by = "month")
+```
+
+## BONUS: Plotting rank change over time {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "10-14"
+(create_id_starting.table(
+  sex = "female",
+  clan = "S",
+  from = "2000-01-01", to = "2002-01-01",
+  lifestage = "!dead", lifestage.overlap = "any" 
+)  %>% 
+  reshape_row_date.seq(ID, from = "2000-01-01", to = "2002-01-01",
+                       by = "month") %>% 
+  
+  #Determine standardised rank at each date
+  mutate(rank = fetch_id_rank.sex.std(ID = ID, at = date)) %>% 
+  #Only include cases where rank was returned
+  #(i.e. exclude when they were not alive)
+  filter(!is.na(rank)) -> plot_data)
+```
+
+## BONUS: Plotting rank change over time {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig.width: 7.5
+#| fig.height: 4.5
+#| code-fold: true
+last_record <- plot_data %>% 
+  group_by(ID) %>% 
+  slice(n())
+
+ggplot() +
+  geom_line(data = plot_data,
+            aes(x = date, y = rank, group = ID, colour = ID), size = 1) +
+  geom_text(data = last_record,
+            aes(x = date + 50, y = rank, label = ID, colour = ID), size = 3) +
+  labs(x = "", y = "Standardized rank of females (Shamba)") +
+  scale_x_date(date_labels = "%b-%y", date_breaks = "2 month") +
+  coord_cartesian(clip = "off", xlim = c(as.Date(NA), as.Date("2002-01-01"))) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.margin = margin(r = 40, l = 20, t = 20))
+```
+
+# [HOMEWORK:]{style="color:#ff2c2d;"} Find the **oldest** individual in each main clan on 2000-01-01

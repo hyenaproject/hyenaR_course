@@ -1,0 +1,396 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 16"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "9"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+library(skimr) ## Inspect data
+library(purrr) ## For loops in the tidyverse
+```
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+# GOAL 1: 🧑‍🏫 Using loops in R
+
+# Adult sex ratio per year
+
+## Without a loop {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-4|5-6|8-9"
+#1997
+# Extract all adults in 1997
+ad_1997 <- create_id_starting.table(lifestage = "adult",
+                                    from = "1997-01-01", to = "1997-12-31") %>% 
+  #Extract sex information
+  mutate(sex = fetch_id_sex(ID))
+
+#Determine sex ratio
+sexratio_1997 <- sum(ad_1997$sex %in% "male")/nrow(ad_1997)
+
+sexratio_1997
+```
+
+## Without a loop {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-14|16-17"
+#1997
+ad_1997 <- create_id_starting.table(lifestage = "adult",
+                                    from = "1997-01-01", to = "1997-12-31") %>% 
+  mutate(sex = fetch_id_sex(ID))
+
+sexratio_1997 <- sum(ad_1997$sex %in% "male")/nrow(ad_1997)
+
+### COPY-PASTE-EDIT THE SAME CODE FOR EVERY YEAR!
+#1998
+ad_1998 <- create_id_starting.table(lifestage = "adult",
+                                    from = "1998-01-01", to = "1998-12-31") %>% 
+  mutate(sex = fetch_id_sex(ID))
+
+sexratio_1998 <- sum(ad_1998$sex %in% "male")/nrow(ad_1998)
+
+tibble(year = 1997:1998,
+       sexratio = c(sexratio_1997, sexratio_1998))
+```
+
+## Without a loop {auto-animate="true"}
+
+<br><br>
+
+### [RULE OF THREE:]{style="color:#ff2c2d;"} If you need to copy-paste the same code 3 or more times you need to rework (e.g. looping!)
+
+## The 'for' loop {auto-animate="true"}
+
+<br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|5-6"
+## For every value between 1997 and 2000...
+## Create a variable called 'year' that has this value...
+for (year in 1997:2000) {
+  
+  ## Run this code.
+  print(paste("It's year:", year))
+  
+}
+```
+
+## The 'for' loop {auto-animate="true"}
+
+<br>
+
+### Why doesn't this do anything?!?!?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|5-8|9-14"
+## For every value between 1997 and 2000...
+## Create a variable called 'year' that has this value...
+for (year in 1997:2000) {
+  
+  ## Start and end date of our code is now determined by
+  ## the value of the variable 'year'
+  start_date <- paste(year, "-01-01")
+  end_date   <- paste(year, "-12-31")
+  ad         <- create_id_starting.table(lifestage = "adult",
+                                         from = start_date,
+                                         to = end_date) %>% 
+    mutate(sex = fetch_id_sex(ID))
+  
+  sum(ad$sex %in% "male")/nrow(ad)
+  
+}
+```
+
+## The 'for' loop {auto-animate="true"}
+
+### Anything inside 'for' is lost unless we save it!
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|16-17"
+#Create an empty vector...
+sex_ratio <- c()
+
+## For every value between 1997 and 2000...
+## Create a variable called 'year' that has this value...
+for (year in 1997:2000) {
+  
+  ## Run this code.
+  start_date <- paste(year, "-01-01")
+  end_date   <- paste(year, "-12-31")
+  ad         <- create_id_starting.table(lifestage = "adult",
+                                         from = start_date,
+                                         to = end_date) %>% 
+    mutate(sex = fetch_id_sex(ID))
+  
+  #Append the new value to our vector
+  sex_ratio <- append(sex_ratio, sum(ad$sex %in% "male")/nrow(ad))
+  
+}
+```
+
+## The 'for' loop {auto-animate="true"}
+
+### Anything inside 'for' is lost unless we save it!
+
+```{r}
+#| echo: true
+#| code-fold: true
+#Create an empty vector...
+sex_ratio <- c()
+
+## For every value between 1997 and 2000...
+## Create a variable called 'year' that has this value...
+for (year in 1997:2000) {
+  
+  ## Run this code.
+  start_date <- paste(year, "-01-01")
+  end_date   <- paste(year, "-12-31")
+  ad         <- create_id_starting.table(lifestage = "adult",
+                                         from = start_date,
+                                         to = end_date) %>% 
+    mutate(sex = fetch_id_sex(ID))
+  
+  #Append the new value to our vector
+  sex_ratio <- append(sex_ratio, sum(ad$sex %in% "male")/nrow(ad))
+  
+}
+
+tibble(year = 1997:2000,
+       sex_ratio = sex_ratio)
+```
+
+## 'apply' functions {auto-animate="true"}
+
+### `sapply` returns a vector by default
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-3|4-7"
+sapply(
+  # Loop through these values...
+  X = 1997:2000,
+  # Run this function
+  FUN = function(year){
+    paste("It's year", year)
+  })
+```
+
+## 'apply' functions {auto-animate="true"}
+
+### `sapply` returns a vector by default
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-3|4-12"
+sex_ratio <- sapply(
+  ## Use each value 1997:2000...
+  X = 1997:2000,
+  ## To run this function...
+  FUN = function(year){
+    start_date <- paste(year, "-01-01")
+    end_date   <- paste(year, "-12-31")
+    ad         <- create_id_starting.table(lifestage = "adult", from = start_date, to = end_date) %>% 
+      mutate(sex = fetch_id_sex(ID))
+    
+    #The output will be added to a vector
+    sum(ad$sex %in% "male")/nrow(ad)
+  })
+```
+
+## 'apply' functions {auto-animate="true"}
+
+### `sapply` returns a vector by default
+
+```{r}
+#| echo: true
+#| code-fold: true
+sex_ratio <- sapply(
+  ## Use each value 1997:2000...
+  X = 1997:2000,
+  ## To run this function...
+  FUN = function(year){
+    start_date <- paste(year, "-01-01")
+    end_date   <- paste(year, "-12-31")
+    ad         <- create_id_starting.table(lifestage = "adult", from = start_date, to = end_date) %>% 
+      mutate(sex = fetch_id_sex(ID))
+    
+    #The output will be added to a vector
+    sum(ad$sex %in% "male")/nrow(ad)
+  })
+
+tibble(year = 1997:2000,
+       sex_ratio = sex_ratio)
+```
+
+## 'purrr' package {auto-animate="true"}
+
+### `map` functions from package purrr can also be used to loop.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-9|11-13"
+# Create a loop that already outputs a data frame (i.e. _df)!!
+purrr::map_df(
+  # Loop through each value of .x and run function .f
+  .x = 1997:2000,
+  .f = function(year){
+    start_date <- paste(year, "-01-01")
+    end_date   <- paste(year, "-12-31")
+    ad         <- create_id_starting.table(lifestage = "adult", from = start_date, to = end_date) %>% 
+      mutate(sex = fetch_id_sex(ID))
+    
+    #Output a data frame
+    tibble(year = year,
+           sex_ratio = sum(ad$sex %in% "male")/nrow(ad))
+  })
+```
+
+## Work across a vector {auto-animate="true"}
+
+### Many functions in `hyenaR` accept a vector!
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-4|5-9|10-11"
+# Create columns for start and end date...
+tibble(year = 1997:2000) %>% 
+  mutate(start_date = paste0(year, "-01-01"),
+         end_date = paste0(year, "-12-31")) %>% 
+  # Use fetch function that can take multiple start/end dates...
+  mutate(nr_male = fetch_pop_number.male.adult(from = start_date,
+                                               to = end_date),
+         nr_ad = fetch_pop_number.anysex.adult(from = start_date,
+                                               to = end_date),
+         ## Calculate sex ratio
+         sex_ratio = nr_male/nr_ad)
+```
+
+## Which is better? {auto-animate="true"}
+
+<br>
+
+- `hyenaR` can be a bit slower (for now), but should be more user friendly.
+
+```{r}
+#| eval: true
+#| echo: false
+print("purrr")
+system.time({purrr::map_df(
+  # Loop through each value of .x and run function .f
+  .x = 1997:2000,
+  .f = function(year){
+    start_date <- paste(year, "-01-01")
+    end_date   <- paste(year, "-12-31")
+    ad         <- create_id_starting.table(lifestage = "adult", from = start_date, to = end_date) %>% 
+      mutate(sex = fetch_id_sex(ID))
+    
+    #Output a data frame row
+    tibble(year = year,
+           sex_ratio = sum(ad$sex %in% "male")/nrow(ad))
+  })})
+
+print("sapply")
+system.time({sex_ratio <- sapply(
+  ## Use each value 1997:2000...
+  X = 1997:2000,
+  ## To run this function...
+  FUN = function(year){
+    start_date <- paste(year, "-01-01")
+    end_date   <- paste(year, "-12-31")
+    ad         <- create_id_starting.table(lifestage = "adult", from = start_date, to = end_date) %>% 
+      mutate(sex = fetch_id_sex(ID))
+    
+    #The output will be added to a vector
+    sum(ad$sex %in% "male")/nrow(ad)
+  })
+
+tibble(year = 1997:2000,
+       sex_ratio = sex_ratio)})
+
+print("for")
+system.time({sex_ratio <- c()
+  
+  ## For every value between 1997 and 2000...
+  ## Create a variable called 'year' that has this value...
+  for (year in 1997:2000) {
+    
+    ## Run this code.
+    start_date <- paste(year, "-01-01")
+    end_date   <- paste(year, "-12-31")
+    ad         <- create_id_starting.table(lifestage = "adult",
+                                           from = start_date,
+                                           to = end_date) %>% 
+      mutate(sex = fetch_id_sex(ID))
+    
+    #Append the new value to our vector
+    sex_ratio <- append(sex_ratio, sum(ad$sex %in% "male")/nrow(ad))
+    
+  }
+  
+  tibble(year = 1997:2000,
+         sex_ratio = sex_ratio)})
+
+print("hyenaR function")
+system.time({tibble(year = 1997:2000) %>% 
+  mutate(start_date = paste(year, "-01-01"),
+         end_date = paste(year, "-12-31")) %>% 
+  mutate(nr_male = fetch_pop_number.male.adult(from = start_date,
+                                               to = end_date),
+         nr_ad = fetch_pop_number.anysex.adult(from = start_date,
+                                               to = end_date),
+         sex_ratio = nr_male/nr_ad)})
+```
+
+## Which is better? {auto-animate="true"}
+
+<br>
+
+- `for` and `sapply` are base functions that require no dependency.
+
+- `purrr` syntax works well for parallel processing packages.
+

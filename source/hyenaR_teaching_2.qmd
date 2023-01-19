@@ -1,0 +1,398 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 2"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Recap: Any [questions]{style="color:#ff2c2d;"} after last week?
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## Some (bonus) plotting
+```
+
+<br>
+
+::: fragment
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+:::
+
+# [TASK 1:]{style="color:#ff2c2d;"} Reproductive success of males
+
+## EXAMPLE 1: Find 10 most successful males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+create_id_starting.table(
+  
+  ## Select all males..
+  sex = "male")
+```
+
+## EXAMPLE 1: Find 10 most successful males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-5"
+create_id_starting.table(
+  sex = "male") %>% 
+  
+  # Create columns with total number of offspring for each male
+  mutate(RS = fetch_id_number.offspring(ID = ID))
+```
+
+## EXAMPLE 1: Find 10 most successful males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-6"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID)) %>% 
+  
+  ## Arrange data so that males with highest RS are at the top
+  arrange(desc(RS))
+```
+
+## EXAMPLE 1: Find 10 most successful males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-7"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID)) %>% 
+  arrange(desc(RS)) %>% 
+  
+  ## 'Slice' off the top 10 records
+  slice(1:10)
+```
+
+## EXAMPLE 1: Find 10 most successful males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-6|7-9"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         #Determine the rank of males based on reproductive success
+         #Largest RS is ranked 1
+         rank = dense_rank(-RS)) %>%
+  #Filter top 10 ranked males (allows for ties)
+  filter(rank %in% 1:10) %>% 
+  arrange(rank)
+```
+
+# [TASK 1:]{style="color:#ff2c2d;"} Reproductive success of males
+
+## EXAMPLE 2: Find clan that produces most successful males on average {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+create_id_starting.table(
+  
+  ## Select all males..
+  sex = "male",
+  
+)
+```
+
+## EXAMPLE 2: Find clan that produces most successful males on average {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-5|7-8"
+create_id_starting.table(
+  sex = "male") %>% 
+  
+  # Create columns with total number of offspring for each male
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         
+         #Create second column with birth clan of individual
+         birth.clan = fetch_id_clan.birth(ID = ID))
+```
+
+## EXAMPLE 2: Find clan that produces most successful males on average {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-7|8-10|11-12"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  
+  ## Group by birth clan
+  group_by(birth.clan) %>% 
+  #Return avg male RS for each clan
+  summarise(meanRS = mean(RS),
+            maxRS = max(RS)) %>% 
+  #Arrange to put most productive clan on top
+  arrange(desc(meanRS))
+```
+
+## EXAMPLE 2: Find clan that produces most successful males on average {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "6-8"
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  
+  #Filter only individuals born in main clans
+  ## TIP: FILTER AS EARLY AS POSSIBLE!!
+  filter(birth.clan %in% find_clan_name.all(main.clans = TRUE)) %>% 
+  
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS),
+            maxRS = max(RS)) %>% 
+  arrange(desc(meanRS))
+```
+
+## EXAMPLE 2: Find clan that produces most successful males on average {auto-animate="true"}
+
+```{r}
+#| echo: true
+create_id_starting.table(
+  sex = "male") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  filter(birth.clan %in% find_clan_name.all(main.clans = TRUE)) %>% 
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS),
+            maxRS = max(RS)) %>% 
+  arrange(desc(meanRS))
+```
+
+# [TASK 1:]{style="color:#ff2c2d;"} Reproductive success of males
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "1-2|4-5|7-9|11-12|14-17"
+## Do the same thing with `create_id_starting table()`
+create_id_starting.table(
+  
+  ## Select all males..
+  sex = "male",
+  
+  ## Males that 'started being cubs' during our focal period
+  ## i.e. they were born during this time
+  lifestage = "cub", lifestage.overlap = "start",
+  
+  ## Only individuals born into main clans
+  clan = find_clan_name.all(main.clans = TRUE),
+  
+  ## Only cubs born within the observation period
+  ## (rather than from first estimated birth or conception)
+  from = find_pop_date.observation.first(),
+  to = find_pop_date.observation.last()
+  
+)
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "1-4|5-7|9-10|11-12"
+# Extract data 'manually' without `create_id_starting.table()` arguments
+create_id_starting.table(
+  sex = "male"
+) %>% 
+  #Extract birth date and birth clan
+  mutate(birth.date = fetch_id_date.birth(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID)) %>% 
+  filter(
+    #Filter individuals born after study started (i.e. non left censored)
+    birth.date > find_pop_date.observation.first(),
+    #Filter individuals born in main clans
+    birth.clan %in% find_clan_name.all(main.clans = TRUE))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-12"
+create_id_starting.table(
+  sex = "male",
+  lifestage = "cub", lifestage.overlap = "start",
+  clan = find_clan_name.all(main.clans = TRUE),
+  from = find_pop_date.observation.first(), to = find_pop_date.observation.last()
+) %>% 
+  
+  ## Filter only males that are not right censored
+  ## NOT THE BEST WAY
+  mutate(is.alive = fetch_id_is.alive(ID = ID,
+                                      at = find_pop_date.observation.last())) %>% 
+  filter(is.alive == FALSE)
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-11"
+create_id_starting.table(
+  sex = "male",
+  lifestage = "cub", lifestage.overlap = "start",
+  clan = find_clan_name.all(main.clans = TRUE),
+  from = find_pop_date.observation.first(), to = find_pop_date.observation.last()
+) %>% 
+  
+  ## Filter only males that are not right censored
+  ## NOT THE BEST WAY
+  mutate(iscensored = fetch_id_is.censored.right(ID = ID)) %>% 
+  filter(iscensored == FALSE)
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-10"
+create_id_starting.table(
+  sex = "male",
+  lifestage = "cub", lifestage.overlap = "start",
+  clan = find_clan_name.all(main.clans = TRUE),
+  from = find_pop_date.observation.first(), to = find_pop_date.observation.last()
+) %>% 
+  
+  ## Filter only males that are not right censored
+  ## BETTER
+  filter(!fetch_id_is.censored.right(ID = ID))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "9-10|11-12|13-14|15-16"
+create_id_starting.table(
+  sex = "male",
+  lifestage = "cub", lifestage.overlap = "start",
+  clan = find_clan_name.all(main.clans = TRUE),
+  from = find_pop_date.observation.first(), to = find_pop_date.observation.last()
+) %>% 
+  filter(!fetch_id_is.censored.right(ID = ID)) %>% 
+  
+  ## RS now defined as offspring that reach 6mo
+  mutate(RS = fetch_id_number.offspring(ID = ID, age.mature = 6, unit = "months"),
+         #Birth clan
+         birth.clan = fetch_id_clan.birth(ID = ID),
+         #Death date for each individual
+         death.date = fetch_id_date.death(ID = ID),
+         #Age at death (use date info from above)
+         max.age = fetch_id_age(ID = ID, at = death.date))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "13-14"
+create_id_starting.table(
+  sex = "male",
+  lifestage = "cub", lifestage.overlap = "start",
+  clan = find_clan_name.all(main.clans = TRUE),
+  from = find_pop_date.observation.first(), to = find_pop_date.observation.last()
+) %>% 
+  filter(!fetch_id_is.censored.right(ID = ID)) %>% 
+  
+  ## RS now defined as offspring that reach 6mo
+  mutate(RS = fetch_id_number.offspring(ID = ID, age.mature = 6, unit = "months"),
+         #Birth clan
+         birth.clan = fetch_id_clan.birth(ID = ID),
+         #Age at death (don't store date info)
+         max.age = fetch_id_age(ID = ID, at = fetch_id_date.death(ID = ID)))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "12-15"
+create_id_starting.table(
+  sex = "male",
+  lifestage = "cub", lifestage.overlap = "start",
+  clan = find_clan_name.all(main.clans = TRUE),
+  from = find_pop_date.observation.first(), to = find_pop_date.observation.last()
+) %>% 
+  filter(!fetch_id_is.censored.right(ID = ID)) %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID, age.mature = 6, unit = "months"),
+         birth.clan = fetch_id_clan.birth(ID = ID),
+         max.age = fetch_id_age(ID = ID, at = fetch_id_date.death(ID = ID))) %>% 
+  
+  #Group by/summarise
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS)) %>% 
+  arrange(desc(meanRS))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+create_id_starting.table(sex = "male", lifestage = "cub", clan = find_clan_name.all(main.clans = TRUE), lifestage.overlap = "start", from = find_pop_date.observation.first(), to = find_pop_date.observation.last()) %>% 
+  filter(!fetch_id_is.censored.right(ID = ID)) %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID, age.mature = 6, unit = "months"),
+         birth.clan = fetch_id_clan.birth(ID = ID),
+         max.age = fetch_id_age(ID = ID, at = fetch_id_date.death(ID = ID))) %>% 
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS)) %>% 
+  arrange(desc(meanRS))
+```
+
+## EXAMPLE 3: Reproductive success of uncensored males {auto-animate="true"}
+
+```{r}
+#| echo: true
+create_id_starting.table(sex = "male", lifestage = "cub", clan = find_clan_name.all(main.clans = TRUE), lifestage.overlap = "start", from = find_pop_date.observation.first(), to = find_pop_date.observation.last()) %>% 
+  filter(!fetch_id_is.censored.right(ID = ID)) %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID, age.mature = 6, unit = "months"),
+         birth.clan = fetch_id_clan.birth(ID = ID),
+         max.age = fetch_id_age(ID = ID, at = fetch_id_date.death(ID = ID))) %>% 
+  group_by(birth.clan) %>% 
+  summarise(meanRS = mean(RS), meanRS_peryr = mean(RS/max.age)) %>% 
+  arrange(desc(meanRS_peryr))
+```

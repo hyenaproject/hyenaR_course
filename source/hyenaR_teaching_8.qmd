@@ -1,0 +1,418 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 8"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# 🎉`hyenaR` v0.9.99994🎉
+
+## Use `{drat}` to access the new version of `{hyenaR}`.
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-2|4-5|7-8"
+## To download package from other sources
+library(drat)
+
+## Include 'hyenaproject' as a package source
+addRepo("hyenaproject") 
+
+## Download hyenaR
+install.packages("hyenaR")
+```
+
+<br>
+
+::: fragment
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2"
+#Check you have the right version (0.9.99994)
+packageVersion("hyenaR")
+```
+:::
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+## GOAL 1: Introduce the new features of v0.9.99994
+
+# Check the NEWS to find out more
+
+```{r}
+#| eval: false
+#| echo: true
+build_vignette_news()
+```
+
+# Relatedness functions
+
+## 👪 New and old relatedness functions {auto-animate="true"}
+
+```{r}
+#| echo: true
+#This is now *correct* relatedness using `kinship2`
+fetch_dyad_relatedness(ID.1 = "T-212", ID.2 = "T-177")
+```
+
+<br>
+
+::: fragment
+```{r}
+#| echo: true
+#This is the previous (incorrect) relatedness used in social support
+fetch_dyad_relatedness.via.filiation(ID.1 = "T-212", ID.2 = "T-177", filiation = "father")
+```
+:::
+
+## 👪 New and old relatedness functions {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| fig-width: 10
+#| fig-height: 7
+#Find relatedness of all individuals in Triangle at a given date
+Triangle_IDs <- find_clan_id(clan = "T", from = "2000-01-01", to = "2001-01-01")
+
+#Estimate relatedness for the first 50
+df <- expand.grid(ID.1 = Triangle_IDs,
+                  ID.2 = Triangle_IDs) %>% 
+  mutate(old_relatedness = fetch_dyad_relatedness.via.filiation(ID.1 = ID.1,
+                                                                ID.2 = ID.2,
+                                                                filiation = "mother_genetic", verbose = FALSE),
+         new_relatedness = fetch_dyad_relatedness(ID.1 = ID.1,
+                                                  ID.2 = ID.2)) %>% 
+  #When there's no relatedness on mother genetic assume it's 0
+  mutate(old_relatedness = tidyr::replace_na(old_relatedness, 0))
+
+df %>% 
+  mutate(diff = abs(old_relatedness - new_relatedness)) %>%
+  {ggplot(.) +
+      geom_histogram(aes(x = diff), binwidth = 0.01) +
+      labs(title = "Functions will have given similar results (but not always)",
+           subtitle = "Triangle clan member during the year 2000") +
+      labs(x = "Difference between old and\nnew relatedness measures") +
+      theme_classic() +
+      theme(plot.title = element_text(face = "bold"))}
+```
+
+# create_id_starting.table()
+
+## 🐛 Bug fix {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-5"
+# OLD BEHAVIOUR: Dispersers are skipped incorrectly
+create_id_starting.table.historic(lifestage = "!dead",
+                                  from = "1998-01-01",
+                                  to = "1998-12-31",
+                                  lifestage.overlap = "always", verbose = FALSE)
+```
+
+## 🐛 Bug fix {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-5"
+# NEW BEHAVIOUR: Dispersers are included!
+create_id_starting.table(lifestage = "!dead",
+                         from = "1998-01-01",
+                         to = "1998-12-31",
+                         lifestage.overlap = "always", verbose = FALSE)
+```
+
+## 🐛 Bug fix {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2"
+# NEW BEHAVIOUR: 'alive' lifestage is possible
+create_id_starting.table(lifestage = "alive",
+                         from = "1998-01-01",
+                         to = "1998-12-31",
+                         lifestage.overlap = "always", verbose = FALSE)
+```
+
+## ✨ New lifestages {auto-animate="true"}
+
+🛑 Lifestage `immigrant` no longer exists 🛑
+
+## ✨ New lifestages {auto-animate="true"}
+
+::: incremental
+-   `founder_male`: sexually active adult male present in the crater at the start of the study (i.e. not cub, subadult, or natal).
+
+-   `foreigner_X`: individual whose birth clan is unknown (X) or was born outside of the main clans (rim clans e.g. U, C) and that has made X observed selections. The number of previous selection events that occurred before the first selection is unknown, therefore X is a minimum number of previous selections.
+:::
+
+## ✨ New lifestages {auto-animate="true"}
+
+::: incremental
+-   `sexually_active`: Individuals that are sexually active (= "philopatric" + "disperser" + "selector_X" + 'foreigner_X' + "founder_male").
+
+-   `selector`: Individuals born in the main clans that are sexually active (= "philopatric" + "disperser" + "selector_X").
+
+-   `foreigner`: Individuals born outside the main clans that are sexually active (= 'foreigner_X').
+
+-   `native`: Individuals that have not left their birth clan (= "cub" + "subadult" + "natal" + "philopatric").
+:::
+
+## ✨ New lifestages {auto-animate="true"}
+
+::: callout-caution
+### WARNING
+
+`selector` meta-lifestage now excludes foreigners. Use `sexually_active` if you want *all* individuals that are sexually active.
+:::
+
+## ⚠️ Change default behaviour {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2"
+# OLD BEHAVIOUR: Return all individuals ever BORN in Airstrip
+create_id_starting.table.historic(clan = "A")
+```
+
+## ⚠️ Change default behaviour {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2"
+# NEW BEHAVIOUR: Return all individuals ever PRESENT in Airstrip
+create_id_starting.table(clan = "A")
+```
+
+## ⚠️ Change default behaviour {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3"
+# NEW BEHAVIOUR: Return all individuals ever BORN in Airstrip
+# using the clan.birth argument
+create_id_starting.table(clan.birth = "A")
+```
+
+## The 'clan.birth' argument {auto-animate="true"}
+
+Allows us to query current lifestage/clan *and* birth clan
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|4|5-6"
+# Individuals that were in Airstrip in 2010
+# but that were not born there
+create_id_starting.table(lifestage = "!native",
+                         clan = "A",
+                         from = "2010-01-01",
+                         to = "2010-12-31")
+```
+
+## The 'clan.birth' argument {auto-animate="true"}
+
+Allows us to query current lifestage/clan *and* birth clan
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|7"
+# Individuals that were in Airstrip in 2010
+# but were born in Forest
+create_id_starting.table(lifestage = "!native",
+                         clan = "A",
+                         from = "2010-01-01",
+                         to = "2010-12-31",
+                         clan.birth = "F")
+```
+
+## The 'clan.birth' argument {auto-animate="true"}
+
+::: callout-caution
+### WARNING
+
+'clan.birth' does not consider from/to/at. For this we need to use lifestage = "cub".
+:::
+
+```{r}
+#| echo: true
+# Individuals born in Airstrip in 2010
+create_id_starting.table(lifestage = "cub",
+                         lifestage.overlap = "start",
+                         clan = "A",
+                         from = "2010-01-01",
+                         to = "2010-12-31")
+```
+
+# 🌧️ Weather data ☀️
+
+## Extract weather data {auto-animate="true"}
+
+```{r}
+#| echo: true
+create_weather_starting.table(variable = c("temp", "rain"),
+                              location = "acacia")
+```
+
+## Extract weather data {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+raw_data <- create_weather_starting.table(variable = c("temp", "rain"),
+                                          location = "acacia")
+
+plot_data <- raw_data %>% 
+  group_by(date = lubridate::as_date(date_time)) %>% 
+  summarise(across(.cols = c(air_temp, precip), .fns = ~{mean(., na.rm = TRUE)}, .names = "{.col}_mean"),
+            across(.cols = c(air_temp, precip), .fns = ~{min(., na.rm = TRUE)}, .names = "{.col}_min"),
+            across(.cols = c(air_temp, precip), .fns = ~{max(., na.rm = TRUE)}, .names = "{.col}_max"))
+
+ggplot(data = plot_data) +
+  geom_ribbon(aes(x = date, ymin = air_temp_min, ymax = air_temp_max),
+              fill = "grey70", alpha = 0.75) +
+  geom_line(aes(x = date, y = air_temp_mean)) +
+  labs(title = "Acacia air temperature",
+       subtitle = "(Apr - Jul 2022)",
+       y = "Mean air temperature (°C)") +
+  scale_x_date(date_labels = "%B-%Y") +
+  theme_classic() +
+  theme(plot.title = element_text(face = "bold"),
+        axis.line.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid.major = element_line(colour = "grey10", size = 0.1))
+```
+
+## Extract weather data {auto-animate="true"}
+
+```{r}
+#| echo: true
+fetch_weather_temp.mean(from = "2022-05-01", to = "2022-07-01",
+                        location = "acacia")
+```
+
+::: fragment
+```{r}
+#| echo: true
+fetch_weather_rain.max(from = "2022-05-01", to = "2022-07-01",
+                       location = "acacia")
+```
+:::
+
+## Extract weather data {auto-animate="true"}
+
+::: callout-caution
+### WARNING
+
+Currently, only data from Acacia and Ngoitokitok are extractable with functions.
+:::
+
+::: callout-caution
+### WARNING
+
+On Windows, will need to use `download_package_csv(download.method = 'curl')` to download weather data.
+:::
+
+# [HOMEWORK:]{style="color:#ff2c2d;"} Combine what we've learnt!
+
+## [TASK 1:]{style="color:#ff2c2d;"}
+
+### Use `create_id_starting.table()` to find all individuals born in main clans in the years 1997 - 2021 (where we have full year observation).
+
+<br>
+
+::: fragment
+### How many individuals have been born in total during this period?
+:::
+
+## [TASK 2:]{style="color:#ff2c2d;"}
+
+### Extract individual birth clan, birth date, sex, and lifespan.
+
+<br>
+
+::: fragment
+### How many individuals have missing data?
+:::
+
+<br>
+
+::: fragment
+### How would you interpet NAs in each column?
+:::
+
+## [TASK 3:]{style="color:#ff2c2d;"}
+
+### Extract the *year* of birth for each individual.
+
+<br>
+
+::: fragment
+### In which year were the most cubs born?
+:::
+
+<br>
+
+::: fragment
+### Is the most productive year the same for all clans?
+:::
+
+<br>
+
+::: fragment
+### BONUS: Use filter to return a data frame with only the best year(s) for each clan?
+:::
+
+## [TASK 4:]{style="color:#ff2c2d;"}
+
+### Extract the *month* of birth for each individual.
+
+<br>
+
+::: fragment
+### What was the most productive month in the crater from 1997-2021?
+:::
+
+<br>
+
+::: fragment
+### How many cubs were produced in that month?
+:::

@@ -1,0 +1,615 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 5"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates!
+library(tidyr) ## Extra data wrangling functions!
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# [Recap]{style="color:#ff2c2d;"}: What did we cover last week?
+
+## Grouped v. ungrouped data {auto-animate="true"}
+
+::: columns
+::: {.column width="50%"}
+### GROUPED
+```{r}
+#| echo: true
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age))
+```
+:::
+
+::: {.column width="50%"}
+### UNGROUPED
+```{r}
+#| echo: true
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  ungroup()
+```
+:::
+:::
+
+## Grouped v. ungrouped data {auto-animate="true"}
+
+::: columns
+::: {.column width="50%"}
+### GROUPED
+```{r}
+#| echo: true
+#| code-line-numbers: "6"
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  summarise(sd_maxage = sd(age))
+```
+:::
+
+::: {.column width="50%"}
+### UNGROUPED
+```{r}
+#| echo: true
+#| code-line-numbers: "7"
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  ungroup() %>% 
+  summarise(sd_maxage = sd(age))
+```
+:::
+:::
+
+## Wide vs. long formats {auto-animate="true"}
+
+### WIDE FORMAT
+
+- Each row should have one *unique* value (e.g. date)
+- Each variable is its own column
+- Common for storing/recording data
+- Has many *columns* but fewer *rows*
+- Less suited for `{ggplot2}` and `{tidyverse}` functions
+
+## Wide vs. long formats {auto-animate="true"}
+
+### WIDE FORMAT
+
+```{r}
+#| echo: false
+(tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   reshape_row_date.seq(clan, from = "1997-07-01", length.out = 1, by = "6 months") %>%
+   mutate(
+     to = date + months(6) - lubridate::days(1),
+     clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+   ) %>% 
+   tidyr::pivot_wider(names_from = clan, values_from = clan_size) %>% 
+   head(1) -> wide_format)
+```
+
+## Wide vs. long formats {auto-animate="true"}
+
+### LONG FORMAT
+
+- Each row should have one unique *combination* of values (e.g. date, clan)
+- Each measurement is its own row
+- Has many *rows* but fewer *columns*
+- Better suited for `{ggplot2}` and `{tidyverse}` functions
+
+## Wide vs. long formats {auto-animate="true"}
+
+### LONG FORMAT
+
+```{r}
+#| echo: false
+(tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   reshape_row_date.seq(clan, from = "1997-07-01", length.out = 1, by = "6 months") %>%
+   mutate(
+     to = date + months(6) - lubridate::days(1),
+     clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+   ) %>% 
+   filter(date == "1997-07-01") %>% 
+   head(8) -> long_format)
+```
+
+## Convert wide to long {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Start with data in wide format
+wide_format
+```
+
+## Convert wide to long {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "3|4|5"
+# Start with data in wide format
+wide_format %>% 
+  tidyr::pivot_longer(cols = A:T,
+                      names_to = "clan",
+                      values_to = "clan_size")
+```
+
+```{r}
+#| echo: false
+wide_format
+```
+
+## Convert wide to long {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Start with data in wide format
+wide_format %>% 
+  tidyr::pivot_longer(cols = A:T,
+                      names_to = "clan",
+                      values_to = "clan_size")
+```
+
+## Convert long to wide {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Start with data in long format
+long_format
+```
+
+## Convert long to wide {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "3|4"
+# Start with data in long format
+long_format %>% 
+  tidyr::pivot_wider(names_from = clan,
+                     values_from = clan_size)
+```
+
+```{r}
+#| echo: false
+long_format
+```
+
+## Convert long to wide {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Start with data in long format
+long_format %>% 
+  tidyr::pivot_wider(names_from = clan,
+                     values_from = clan_size)
+```
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+<br>
+
+### GOAL 1: HOMEWORK
+
+<br>
+
+### GOAL 2: Last sighting and death dates
+
+<br>
+
+### GOAL 3: Outstanding questions
+
+# [HOMEWORK (TASK 1):]{style="color:#ff2c2d;"}<br>Find all uncensored individuals that were born in main clans and reached maturity.
+
+## Our attempts {auto-animate="true"}
+
+::: columns
+::: {.column width="50%"}
+### OLIVER
+```{r}
+#| echo: true
+#| code-fold: true
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE)) %>%
+  mutate(sex = fetch_id_sex(ID = ID),
+         age = fetch_id_age(ID = ID, at = fetch_id_date.observation.last(ID = ID))) %>%
+  filter(!fetch_id_is.censored(ID = ID),
+         age >= 2)  %>% 
+  select(ID, age)
+```
+:::
+
+::: {.column width="50%"}
+### ARJUN
+```{r}
+#| echo: true
+#| code-fold: true
+create_id_starting.table() %>% 
+  #Extract birth date and birth clan
+  mutate(birth.date = fetch_id_date.birth(ID = ID),
+         birth.clan = fetch_id_clan.birth(ID = ID),
+         date.dead = fetch_id_date.death(ID=ID),
+         age.dead = fetch_id_age(ID = ID, at = date.dead),
+         sex = fetch_id_sex(ID = ID)) %>% 
+  filter(
+    #Filter left censored
+    birth.date > find_pop_date.observation.first(),
+    #Filter individuals born in main clans
+    birth.clan %in% find_clan_name.all(main.clans = TRUE), 
+    #filter individuals who lived to age 2+ 
+    age.dead >= 2) %>%
+  #filter right censored
+  filter(!fetch_id_is.censored.right(ID = ID)) %>%
+  ungroup() %>% 
+  select(ID, age.dead)
+```
+:::
+:::
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3|4-5|6-8"
+#If we just specify clan it is the same as giving clan.overlap = "birth" (desirable?)
+(create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   mutate(sex = fetch_id_sex(ID = ID),
+          ## NOTE: Last observation and death are not the same! (more on this later)
+          age = fetch_id_age(ID = ID, at = fetch_id_date.observation.last(ID = ID))) %>%
+   #Filter for uncensored and mature individuals
+   filter(!fetch_id_is.censored(ID = ID),
+          age >= 2) -> my_data)
+```
+
+# [HOMEWORK (TASK 1):]{style="color:#ff2c2d;"} Alternatives
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER ALTERNATIVE #1
+```{r}
+#| echo: true
+#| code-line-numbers: "1-5|6-7"
+# Same starting code
+(create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   mutate(sex = fetch_id_sex(ID = ID),
+          age = fetch_id_age(ID = ID, at = fetch_id_date.observation.last(ID = ID))) %>%
+   filter(!fetch_id_is.censored(ID = ID),
+          #Alternative which applies age > 2 (should make consistent)
+          fetch_id_is.adult(ID = ID, at = fetch_id_date.observation.last(ID = ID))) -> my_data2)
+```
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER ALTERNATIVE #2
+```{r}
+#| echo: true
+#| code-line-numbers: "1-5|6-7"
+# Same starting code
+(create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   mutate(sex = fetch_id_sex(ID = ID),
+          age = fetch_id_age(ID = ID, at = fetch_id_date.observation.last(ID = ID))) %>%
+   filter(!fetch_id_is.censored(ID = ID),
+          # Death and last sighting are not the same
+          fetch_id_is.adult(ID = ID, at = fetch_id_date.death(ID = ID))) -> my_data3)
+```
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER ALTERNATIVE #3
+```{r}
+#| echo: true
+#| code-line-numbers: "1-4"
+# lifestage = "adult" returns individuals that were adults at some point in main clans
+# Therefore, they are not necessarily BORN in the main clans
+(create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                          lifestage = "adult") %>%
+   mutate(sex = fetch_id_sex(ID = ID),
+          age = fetch_id_age(ID = ID, at = fetch_id_date.observation.last(ID = ID))) %>%
+   filter(!fetch_id_is.censored(ID = ID)) -> my_data4)
+```
+
+## Our attempts {auto-animate="true"}
+
+### ARJUN
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-8|9-15|16-18"
+# Do it 'manually'
+(create_id_starting.table() %>% 
+   #Extract birth date and birth clan
+   mutate(birth.date = fetch_id_date.birth(ID = ID),
+          birth.clan = fetch_id_clan.birth(ID = ID),
+          date.dead = fetch_id_date.death(ID=ID),
+          age.dead = fetch_id_age(ID = ID, at = date.dead),
+          sex = fetch_id_sex(ID = ID)) %>% 
+   filter(
+     #Filter left censored
+     birth.date > find_pop_date.observation.first(),
+     #Filter individuals born in main clans
+     birth.clan %in% find_clan_name.all(main.clans = TRUE), 
+     #filter individuals who lived to age 2+ 
+     age.dead >= 2) %>%
+   #filter right censored
+   filter(!fetch_id_is.censored.right(ID = ID)) %>%
+   ungroup() -> mytibble)
+```
+
+## My solution #1 {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3|4-5"
+(create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE)) %>% 
+   filter(!fetch_id_is.censored(ID = ID)) %>% 
+   mutate(lifespan = fetch_id_duration.lifespan(ID = ID, unit = "year"),
+          sex = fetch_id_sex(ID = ID)) %>% 
+   filter(lifespan >= 2) -> liam_df)
+```
+
+## My solution #2 {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-4|5|6-7"
+# Use separate clan.overlap and lifestage args
+(create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                          clan.overlap = "birth",
+                          lifestage = "adult") %>% 
+   filter(!fetch_id_is.censored(ID = ID)) %>% 
+   mutate(lifespan = fetch_id_duration.lifespan(ID = ID, unit = "year"),
+          sex = fetch_id_sex(ID = ID)) -> liam_df2)
+```
+
+# [HOMEWORK (TASK 2):]{style="color:#ff2c2d;"}<br>Calculate the mean and standard deviation of their lifespan.
+
+## Our attempts {auto-animate="true"}
+
+::: columns
+::: {.column width="30%"}
+### OLIVER
+```{r}
+#| echo: true
+#| code-fold: true
+my_data %>%
+  summarise(n = length(age),
+            mean = mean(age),
+            sd = sd(age))
+```
+:::
+
+::: {.column width="30%"}
+### ARJUN
+```{r}
+#| echo: true
+#| code-fold: true
+mytibble %>% 
+  summarize(meanage = mean(age.dead), sdage = sd(age.dead))
+```
+:::
+
+::: {.column width="30%"}
+### LIAM
+```{r}
+#| echo: true
+#| code-fold: true
+liam_df %>% 
+  summarize(mean = mean(lifespan), sd = sd(lifespan))
+```
+:::
+:::
+
+# [HOMEWORK (TASK 3):]{style="color:#ff2c2d;"}<br>How does the mean and standard deviation differ between sexes?
+
+## Our attempts {auto-animate="true"}
+
+::: columns
+::: {.column width="30%"}
+### OLIVER
+```{r}
+#| echo: true
+#| code-fold: true
+my_data %>%
+  group_by(sex) %>%
+  summarise(mean = mean(age),
+            sd = sd(age)) %>%
+  ungroup()
+```
+:::
+
+::: {.column width="30%"}
+### ARJUN
+```{r}
+#| echo: true
+#| code-fold: true
+mytibble %>%
+  group_by(sex) %>% 
+  summarize(mean = mean(age.dead),
+            sd = sd(age.dead))
+```
+:::
+
+::: {.column width="30%"}
+### LIAM
+```{r}
+#| echo: true
+#| code-fold: true
+liam_df %>% 
+  group_by(sex) %>% 
+  summarize(mean = mean(lifespan), sd = sd(lifespan))
+```
+:::
+:::
+
+## Why are last sighting and death date not the same?
+
+::: {.fragment fragment-index="1"}
+- `fetch_id_date.observation.last()` gives the date at which individual was last known to be *alive* (but see issue #545)
+:::
+
+::: {.fragment fragment-index="2"}
+- `fetch_id_date.death()` gives the date *after* an individual's last sighting (or date when death was confirmed)
+:::
+
+::: {.fragment fragment-index="3"}
+- `fetch_id_duration.lifespan()` uses an individual's death date.
+:::
+
+## What is the difference between "2" and 2 when filtering? {auto-animate="true"}
+
+::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: true
+tibble(x = c(1, 2, 3)) %>% 
+  #Coerces character into numeric
+  filter(x > "1")
+```
+:::
+::: {.column width="50%"}
+::: {.fragment}
+```{r}
+#| echo: true
+tibble(x = c(1, 2, 3)) %>% 
+  #Does the same for logical!!
+  filter(x > TRUE)
+```
+:::
+:::
+:::
+
+## What is the difference between "2" and 2 when filtering? {auto-animate="true"}
+
+::: {.fragment}
+```{r}
+#| echo: true
+#| eval: false
+#Logical comparison between character strings can be very confusing!!
+#What do we expect here?
+"abc" > "abb"
+```
+:::
+
+::: {.fragment}
+```{r}
+#| echo: false
+#Logical comparison between character strings can be very confusing!!
+#What do we expect here?
+"abc" > "abb"
+```
+:::
+
+::: {.fragment}
+```{r}
+#| echo: true
+#| eval: false
+#Logical comparison between character strings can be very confusing!!
+#What do we expect here?
+"abc" > "abd"
+```
+:::
+
+::: {.fragment}
+```{r}
+#| echo: false
+#Logical comparison between character strings can be very confusing!!
+#What do we expect here?
+"abc" > "abd"
+```
+:::
+
+## Why are some calls to `create_id_starting.table()` slower? {auto-animate="true"}
+
+::: {.fragment}
+```{r}
+#| echo: true
+#Easy calls just filter from raw data
+
+#All indivduals in hyena.csv
+system.time({create_id_starting.table()})
+```
+:::
+
+::: {.fragment}
+```{r}
+#| echo: true
+#All indivduals born in clan "A"
+system.time({create_id_starting.table(clan = "A")})
+```
+:::
+
+## Why are some calls to `create_id_starting.table()` slower? {auto-animate="true"}
+
+::: {.fragment}
+```{r}
+#| echo: true
+#More complex calls can take longer (is manual process sometimes better?)
+
+#Needs to compare life history table and dates
+system.time({create_id_starting.table(lifestage = "adult",
+                         from = "1997-01-01", to = "1998-01-01")})
+```
+:::
+
+# [HOMEWORK:]{style="color:#ff2c2d;"} What is our next task?
+
+-----
+
+<br>
+
+### [TASK 1:]{style="color:#ff2c2d;"} Filter sightings of all three jackal species from the carnivores table (bj, gj, sj).
+
+<br>
+
+::: {.fragment}
+### [TASK 2:]{style="color:#ff2c2d;"} Determine total sightings of each species in each year.
+:::
+
+<br>
+
+::: {.fragment}
+### [TASK 3:]{style="color:#ff2c2d;"} Convert table to wide format so that we have one row per year and one column per species
+:::

@@ -1,0 +1,299 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 15"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+library(skimr) ## Inspect data
+```
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+# GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}`
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### Extract monthly female reproduction and clan size for Airstrip. Build a model to study the relationship.
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [Extract monthly female reproduction]{style="color:#ff2c2d;"} and clan size for Airstrip. Build a model to study the relationship.
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [Extract monthly female reproduction]{style="color:#ff2c2d;"} [and clan size for Airstrip]{style="color:#1b91ff;"}. Build a model to study the relationship.
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [Extract monthly female reproduction]{style="color:#ff2c2d;"} [and clan size for Airstrip]{style="color:#1b91ff;"}. [Build a model to study the relationship.]{style="color:#fda703;"}
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|4-9"
+start_date <- find_pop_date.observation.first()
+end_date <- find_pop_date.observation.last()
+
+## Extract all adult females in Airstrip during observation period
+create_id_starting.table(sex = "female",
+                         clan = "A",
+                         lifestage = "adult",
+                         from = start_date,
+                         to = end_date)
+```
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-7"
+start_date <- find_pop_date.observation.first()
+end_date <- find_pop_date.observation.last()
+
+create_id_starting.table(sex = "female", clan = "A", lifestage = "adult", from = start_date, to = end_date) %>% 
+  ## Extract dates over which individual could reproduce...
+  mutate(adult_date = fetch_id_date.at.age(ID = ID, age = 2),
+         death_date = fetch_id_date.death(ID = ID))
+```
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "7|8-9|10-11"
+start_date <- find_pop_date.observation.first()
+end_date <- find_pop_date.observation.last()
+
+create_id_starting.table(sex = "female", clan = "A", lifestage = "adult", from = start_date, to = end_date) %>% 
+  mutate(adult_date = fetch_id_date.at.age(ID = ID, age = 2),
+         death_date = fetch_id_date.death(ID = ID)) %>% 
+  ## Use case when to deal with left and right censored individuals...
+  mutate(start_date = case_when(adult_date < start_date ~ start_date,
+                                TRUE ~ start_date),
+         end_date = case_when(is.na(death_date) ~ end_date,
+                              TRUE ~ death_date))
+```
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "11|12|13"
+start_date <- find_pop_date.observation.first()
+end_date <- find_pop_date.observation.last()
+
+create_id_starting.table(sex = "female", clan = "A", lifestage = "adult", from = start_date, to = end_date) %>% 
+  mutate(adult_date = fetch_id_date.at.age(ID = ID, age = 2),
+         death_date = fetch_id_date.death(ID = ID)) %>% 
+  mutate(start_date = case_when(adult_date < start_date ~ start_date,
+                                TRUE ~ start_date),
+         end_date = case_when(is.na(death_date) ~ end_date,
+                              TRUE ~ death_date)) %>% 
+  ## Only use months where individual was alive the whole time
+  mutate(start_date = lubridate::ceiling_date(start_date, unit = "month"),
+         end_date = lubridate::floor_date(end_date, unit = "month"))
+```
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "15-18"
+start_date <- find_pop_date.observation.first()
+end_date <- find_pop_date.observation.last()
+
+ID_data <- create_id_starting.table(sex = "female", clan = "A", lifestage = "adult", from = start_date, to = end_date) %>% 
+  mutate(adult_date = fetch_id_date.at.age(ID = ID, age = 2),
+         death_date = fetch_id_date.death(ID = ID)) %>% 
+  mutate(start_date = case_when(adult_date < start_date ~ start_date,
+                                TRUE ~ start_date),
+         end_date = case_when(is.na(death_date) ~ end_date,
+                              TRUE ~ death_date)) %>% 
+  mutate(start_date = lubridate::ceiling_date(start_date, unit = "month"),
+         end_date = lubridate::floor_date(end_date, unit = "month")) %>% 
+  ## Create one row per month of life...
+  reshape_row_date.seq(ID, from = start_date, to = end_date, by = "1 month") %>% 
+  group_by(ID) %>% 
+  mutate(end_date = lead(date) - 1) %>% 
+  ungroup() %>% 
+  filter(!is.na(end_date))
+```
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+ID_data
+```
+
+## [Extract monthly female reproduction...]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-5"
+(repro_data <- ID_data %>% 
+  mutate(RS = fetch_id_number.offspring(ID, from = date, to = end_date,
+                                        age.mature = 6,
+                                        unit = "month"),
+         repro = RS > 0))
+```
+
+## [...and clan size for Airstrip]{style="color:#1b91ff;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-8"
+tibble(clan = "A") %>% 
+  #Expand out for Airstrip over the same dates...
+  reshape_row_date.seq(clan,
+                       from = ceiling_date(start_date, unit = "month"),
+                       to = floor_date(end_date, unit = "month"),
+                       by = "month") %>% 
+  mutate(end_date = lead(date) - 1) %>% 
+  filter(!is.na(end_date))
+```
+
+## [...and clan size for Airstrip]{style="color:#1b91ff;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-6"
+clan_data <- tibble(clan = "A") %>% 
+  reshape_row_date.seq(clan, from = ceiling_date(start_date, unit = "month"), to = floor_date(end_date, unit = "month"), by = "month") %>% 
+  mutate(end_date = lead(date) - 1) %>% 
+  filter(!is.na(end_date)) %>% 
+  mutate(clan_size = fetch_clan_number(clan = clan,
+                                       from = date, to = end_date))
+```
+
+## [...and clan size for Airstrip]{style="color:#1b91ff;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+clan_data
+```
+
+## [...and clan size for Airstrip]{style="color:#1b91ff;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+final_data <- repro_data %>% 
+  left_join(clan_data, by = c("date", "end_date"))
+```
+
+## [Build a model to study the relationship.]{style="color:#fda703;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+mod <- glm(repro ~ clan_size, data = final_data,
+           family = "binomial")
+
+summary(mod)
+```
+
+## [Build a model to study the relationship.]{style="color:#fda703;"}{auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| fig-width: 7
+#| fig-height: 5
+pred_data <- data.frame(clan_size = seq(30, 140, 1)) %>% 
+  mutate(pred = predict(mod, newdata = ., type = "response"))
+
+plot_data <- final_data %>% 
+  mutate(clan_size_10 = (clan_size %/% 10) * 10 + 5) %>% 
+  group_by(clan_size_10) %>% 
+  summarise(binom::binom.wilson(x = sum(repro), n = n()))
+
+ggplot() +
+  geom_errorbar(data = plot_data, aes(x = clan_size_10,
+                                      ymin = lower, ymax = upper),
+                width = 2.5) +
+  geom_point(data = plot_data, aes(x = clan_size_10,
+                                   y = mean),
+             shape = 21, colour = "white", fill = "grey10",
+             size = 2) +
+  geom_line(data = pred_data, aes(x = clan_size, y = pred),
+            linewidth = 1) +
+  labs(y = "Probability of reproduction",
+       x = "Clan size",
+       title = "Airstrip clan") +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.01)) +
+  theme_classic() +
+  theme(axis.text = element_text(colour = "black", size = 10))
+```
+

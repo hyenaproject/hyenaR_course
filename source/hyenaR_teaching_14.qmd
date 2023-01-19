@@ -1,0 +1,324 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 14"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+library(skimr) ## Inspect data
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+# GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}`
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### List of all adults of main clans with their highest lifetime rank.
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [List of all adults of main clans]{style="color:#ff2c2d;"} with their highest lifetime rank.
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [List of all adults of main clans]{style="color:#ff2c2d;"} [with their highest lifetime rank.]{style="color:#1b91ff;"}
+
+## [List of all adults of main clans]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|5-6|7-10|11-13"
+## Work within the observation period...
+start_date = find_pop_date.observation.first()
+end_date = find_pop_date.observation.last()
+create_id_starting.table(
+  #Only known sex
+  sex = c("female", "male"),
+  #Individuals started and stopped being adults
+  #in the study period (i.e. uncensored)
+  lifestage = "adult",
+  lifestage.overlap = "within",
+  #Only use individuals born in main clans
+  #Males that disperse from outside could have adult period unobserved
+  clan.birth = find_clan_name.all(main.clans = TRUE),
+  from = start_date,
+  to = end_date
+)
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "9-11"
+create_id_starting.table(
+  sex = c("female", "male"),
+  lifestage = "adult",
+  lifestage.overlap = "within",
+  clan.birth = find_clan_name.all(main.clans = TRUE),
+  from = start_date,
+  to = end_date
+) %>% 
+  # Find the period during which ranks need to be calculated
+  mutate(start_adult = fetch_id_date.at.age(ID, age = 2),
+         end_adult = fetch_id_date.death(ID))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|8-9"
+(expanded_df <- create_id_starting.table(
+  sex = c("female", "male"),
+  lifestage = "adult", lifestage.overlap = "within",
+  clan.birth = find_clan_name.all(main.clans = TRUE),
+  from = start_date, to = end_date) %>% 
+  mutate(start_adult = fetch_id_date.at.age(ID, age = 2),
+         end_adult = fetch_id_date.death(ID)) %>% 
+  #Expand data to one row per 6 month period of an adults life
+  reshape_row_date.seq(ID, from = start_adult, to = end_adult, by = "6 month"))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3-4|5-7|8|9-10"
+mainclans <- find_clan_name.all()
+system.time({expanded_df_rank <- expanded_df %>% 
+    # Extract current clan and per 6 months
+    mutate(current_clan = fetch_id_clan.current(ID, at = date)) %>% 
+    # Remove individuals that were outside the clan at any point
+    group_by(ID) %>% 
+    filter(all(current_clan %in% mainclans)) %>% 
+    ungroup() %>% 
+    #Extract ranks of remaining individuals
+    mutate(rank = fetch_id_rank.std(ID, at = date))})
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+expanded_df_rank
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig-width: 14
+#| fig-height: 7
+#| code-fold: true
+plot_data <- expanded_df_rank %>% 
+  mutate(sex = fetch_id_sex(ID),
+         philo = case_when(fetch_id_is.native(ID, at = date) ~ "philopatric",
+                           TRUE ~ "disperser")) %>% 
+  group_by(ID, philo) %>% 
+  mutate(years_since_start = (date - min(date))/365,
+         relative_rank_change = rank - min(rank))
+
+ggplot(data = plot_data) +
+  geom_line(aes(x = date, y = rank,
+                group = ID, colour = ID)) +
+  scale_x_date(breaks = seq(as.Date("1995-01-01"), as.Date("2020-01-01"), "5 year"),
+               date_labels = "%Y",
+               limits = c(as.Date("1995-01-01"), as.Date("2021-01-01"))) +
+  labs(x = "Date", y = "Standardised rank") +
+  facet_wrap(facets = ~sex + philo) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 10, colour = "black"))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig-width: 14
+#| fig-height: 7
+#| code-fold: true
+plot_data2 <- plot_data %>% 
+  filter(current_clan == "A")
+
+ggplot(data = plot_data2) +
+  geom_line(aes(x = date, y = rank,
+                group = ID, colour = ID)) +
+  scale_x_date(breaks = seq(as.Date("1995-01-01"), as.Date("2020-01-01"), "5 year"),
+               date_labels = "%Y",
+               limits = c(as.Date("1995-01-01"), as.Date("2021-01-01"))) +
+  facet_wrap(facets = ~sex + philo) +
+  labs(x = "Date", y = "Standardised rank",
+       title = "Airstrip") +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 10, colour = "black"),
+        plot.title = element_text(size = 20, colour = "black", face = "bold"))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig-width: 14
+#| fig-height: 7
+#| code-fold: true
+ggplot(data = plot_data2) +
+  geom_line(aes(x = years_since_start, y = rank,
+                group = ID, colour = ID)) +
+  labs(y = "Standardised rank", x = "Years in lifestage",
+       title = "Airstrip") +
+  facet_wrap(facets = ~sex + philo) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 10, colour = "black"),
+        plot.title = element_text(size = 20, colour = "black", face = "bold"))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig-width: 14
+#| fig-height: 7
+#| code-fold: true
+ggplot(data = plot_data2) +
+  geom_line(aes(x = years_since_start, y = rank,
+                group = ID), colour = "grey60",
+            alpha = 0.5) +
+  geom_smooth(aes(x = years_since_start, y = rank),
+              colour = "black", se = FALSE) +
+  labs(y = "Standardised rank", x = "Years in lifestage",
+       title = "Airstrip") +
+  facet_wrap(facets = ~sex + philo) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 10, colour = "black"),
+        plot.title = element_text(size = 20, colour = "black", face = "bold"))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig-width: 14
+#| fig-height: 7
+#| code-fold: true
+plot_data3 <- plot_data %>% 
+  filter(ID == "A-019")
+
+ggplot(data = plot_data3) +
+  geom_line(aes(x = date, y = rank,
+                group = ID), size = 1,
+            colour = "black") +
+  geom_point(aes(x = date, y = rank),
+             size = 2, shape = 21,
+            colour = "black", fill = "white", stroke = 1) +
+  labs(y = "Standardised rank", x = "Years in lifestage",
+       title = "A-019") +
+  scale_y_continuous(limits = c(NA, 1),
+                     breaks = seq(-0.25, 1, 0.25)) +
+  scale_x_date(breaks = seq(as.Date("1995-01-01"), as.Date("2020-01-01"), "5 year"),
+               date_labels = "%Y",
+               limits = c(as.Date("1995-01-01"), as.Date("2021-01-01"))) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 10, colour = "black"),
+        plot.title = element_text(size = 20, colour = "black", face = "bold"))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-4"
+expanded_df_rank %>% 
+  #Determine the max rank per ID
+  group_by(ID) %>% 
+  summarise(max_rank = max(rank)) %>% 
+  arrange(desc(max_rank))
+```
+
+## [...with their highest lifetime rank.]{style="color:#1b91ff;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig-width: 10
+#| fig-height: 10
+#| code-fold: true
+plot_data4 <- expanded_df_rank %>% 
+  #Determine the max rank per ID
+  group_by(ID) %>% 
+  summarise(max_rank = max(rank)) %>% 
+  arrange(desc(max_rank)) %>% 
+  mutate(birthclan = fetch_id_clan.birth(ID),
+         sex = fetch_id_sex(ID))
+
+ggplot(data = plot_data4) +
+  geom_boxplot(aes(x = birthclan, y = max_rank, fill = sex)) +
+  labs(x = "Clan", y = "Maximum rank") +
+  theme_classic() +
+  theme(axis.title = element_text(size = 15),
+        axis.text = element_text(size = 10, colour = "black"),
+        plot.title = element_text(size = 20, colour = "black", face = "bold"))
+```

@@ -1,0 +1,471 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 11"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# [RECAP:]{style="color:#ff2c2d;"} Getting started
+
+------------------------------------------------------------------------
+
+### Use `{drat}` to access the current (stable) version of `{hyenaR}`.
+
+<br>
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-2|4-5|7-8"
+## To download package from other sources
+library(drat)
+
+## Include 'hyenaproject' as a package source
+addRepo("hyenaproject") 
+
+## Download hyenaR
+install.packages("hyenaR")
+```
+
+------------------------------------------------------------------------
+
+### Accessing the data
+
+<br>
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "2|4-5"
+library(hyenaR)
+download_package_csv(
+  
+  #Where to download
+  csv.output.folder = "example_git/source_data"
+  
+)
+```
+
+------------------------------------------------------------------------
+
+### Build the database
+
+<br>
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7|9-10"
+build_package_database.full(
+  
+  #Name of database file
+  db.name = "Fisidata_2022_08_10",
+  
+  #Where the .csv files are stored
+  input.folder = "example_git/source_data",
+  
+  #Where the database will be stored
+  db.output.folder = "example_git/source_data"
+)
+```
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "1|2|3|4|5|6|7"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+<br> <br>
+
+### GOAL 1: ♻️ Revisit the `summarise()` function
+
+<br>
+
+### GOAL 2: 🧑‍🏫 Different ways to count data
+
+<br>
+
+### GOAL 3: ✅ A simple example with censored data
+
+# GOAL 1: ♻️ Revisit the `summarise()` function
+
+## `summarise()` can apply [any]{style="color:#ff2c2d;"} function to our data {auto-animate="true"}
+
+<br>
+
+What is the longest a female has ever lived?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4"
+#Create a data frame of all females
+create_id_starting.table(sex = "female") %>% 
+  #Determine the lifespan of each female
+  mutate(lifespan = fetch_id_duration.lifespan(ID))
+```
+
+## `summarise()` can apply [any]{style="color:#ff2c2d;"} function to our data {auto-animate="true"}
+
+<br>
+
+What is the longest a female has ever lived?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-6"
+#Create a data frame of all females
+create_id_starting.table(sex = "female") %>% 
+  #Determine the lifespan of each female
+  mutate(lifespan = fetch_id_duration.lifespan(ID)) %>% 
+  #Summarise our data to find the maximum value of lifespan
+  summarise(max_age = max(lifespan, na.rm = TRUE))
+```
+
+## `summarise()` can apply [any]{style="color:#ff2c2d;"} function to our data {auto-animate="true"}
+
+<br>
+
+Find the max lifespan in months...
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-6"
+#Create a data frame of all females
+create_id_starting.table(sex = "female") %>% 
+  #Determine the lifespan of each female
+  mutate(lifespan = fetch_id_duration.lifespan(ID)) %>% 
+  #Summarise our data to find max lifespan in months
+  summarise(lifespan_months = max(lifespan, na.rm = TRUE)*12)
+```
+
+## `summarise()` can apply [multiple]{style="color:#ff2c2d;"} functions to our data at the same time {auto-animate="true"}
+
+<br>
+
+Summarise both the max and mean lifespan...
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5|6|7"
+#Create a data frame of all females
+create_id_starting.table(sex = "female") %>% 
+  #Determine the lifespan of each female
+  mutate(lifespan = fetch_id_duration.lifespan(ID)) %>% 
+  #Summarise our data to find BOTH the maximum and mean value of lifespan
+  summarise(max_age = max(lifespan, na.rm = TRUE),
+            mean_age = mean(lifespan, na.rm = TRUE))
+```
+
+## `group_by()`/`summarise()` applies functions to [subsets]{style="color:#ff2c2d;"} of the data {auto-animate="true"}
+
+Summarise for females born in each clan...
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-line-numbers: "3-4|5-6|7|9-10|11-12|13-14"
+create_id_starting.table(sex = "female") %>% 
+  mutate(lifespan = fetch_id_duration.lifespan(ID),
+         #Find birth clan...
+         clan = fetch_id_clan.birth(ID)) %>% 
+  # Group by clan so we will apply functions to data from each clan separately...
+  group_by(clan) %>% 
+  #Summarise our data to find three things:
+  summarise(
+            #- Number of females
+            n = n(),
+            #- Max age
+            max_age = max(lifespan, na.rm = TRUE),
+            #- Mean age
+            mean_age = mean(lifespan, na.rm = TRUE))
+```
+
+# [ANY]{style="color:#ff2c2d;"} function in R can be used inside `summarise()`
+
+## 🤓 Try for yourself {auto-animate="true"}
+
+<br>
+
+Start with this data...
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: false
+create_id_starting.table(sex = "female") %>% 
+  mutate(lifespan = fetch_id_duration.lifespan(ID),
+         #Find birth clan...
+         clan = fetch_id_clan.birth(ID))
+```
+
+...and find the mean lifespan in each clan.
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-line-numbers: "5-6"
+create_id_starting.table(sex = "female") %>% 
+  mutate(lifespan = fetch_id_duration.lifespan(ID),
+         #Find birth clan...
+         clan = fetch_id_clan.birth(ID)) %>% 
+  group_by(clan) %>% 
+  summarise(mean_lifespan = mean(lifespan, na.rm = TRUE))
+```
+
+## 🤓 Try for yourself {auto-animate="true"}
+
+<br>
+
+Start with this data...
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: false
+create_id_starting.table(sex = "female") %>% 
+  mutate(reproductive_success = fetch_id_number.offspring(ID),
+         clan = fetch_id_clan.birth(ID))
+```
+
+...and find the sum and mean reproductive success and number of individuals (using `n()`) in each clan.
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-line-numbers: "5|6|7"
+create_id_starting.table(sex = "female") %>% 
+  mutate(reproductive_success = fetch_id_number.offspring(ID),
+         clan = fetch_id_clan.birth(ID)) %>% 
+  group_by(clan) %>% 
+  summarise(sum = sum(reproductive_success),
+            mean = mean(reproductive_success),
+            n = n())
+```
+
+## 🤓 Try for yourself {auto-animate="true"}
+
+<br>
+
+Start with this data...
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: false
+create_id_starting.table(sex = "female") %>% 
+  mutate(reproductive_success = fetch_id_number.offspring(ID),
+         clan = fetch_id_clan.birth(ID))
+```
+
+...and find number of offspring per capita in each clan.
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-line-numbers: "5"
+create_id_starting.table(sex = "female") %>% 
+  mutate(reproductive_success = fetch_id_number.offspring(ID),
+         clan = fetch_id_clan.birth(ID)) %>% 
+  group_by(clan) %>% 
+  summarise(offspring_percap = sum(reproductive_success)/n())
+```
+
+# 🧑‍🏫 Different ways to count data
+
+## 🧑‍🏫 Different ways to count data {auto-animate="true"}
+
+<br>
+
+### If we have a [vector]{style="color:#ff2c2d;"} (e.g. of IDs) we can use `length()`. This returns a [single number]{style="color:#1b91ff;"}.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|4"
+# Return a VECTOR of female IDs
+IDs <- find_pop_id(sex = "female")
+
+length(IDs)
+```
+
+## 🧑‍🏫 Different ways to count data {auto-animate="true"}
+
+<br>
+
+### If we have a [data frame]{style="color:#ff2c2d;"} we can use `nrow()`. This returns a [single number]{style="color:#1b91ff;"}.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|4"
+# Create a DATA FRAME with and ID column
+ID_dataframe <- create_id_starting.table(sex = "female") 
+  
+nrow(ID_dataframe)
+```
+
+## 🧑‍🏫 Different ways to count data {auto-animate="true"}
+
+<br>
+
+### If we have a [data frame]{style="color:#ff2c2d;"} we can use `count()`. This returns a [new data frame]{style="color:#1b91ff;"}.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4"
+# Create a DATA FRAME with and ID column
+create_id_starting.table(sex = "female") %>% 
+  #Create data frame with new column `n`
+  count()
+```
+
+## 🧑‍🏫 Different ways to count data {auto-animate="true"}
+
+<br>
+<br>
+
+### Why might we want to return a data frame?!
+
+::: incremental
+-   We can continue working with dplyr functions.
+
+-   Data frame is needed for statistical models (e.g. `lm()`) and plotting (e.g. `ggplot()`).
+
+-   Data frame can be easily output as .csv with e.g. `write.csv()`
+:::
+
+## 🧑‍🏫 Different ways to count data {auto-animate="true"}
+
+<br>
+
+### If we have a [data frame]{style="color:#ff2c2d;"} and want to count and do other tasks we can use `summarise()` and `n()`. This returns a [new data frame]{style="color:#1b91ff;"}.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|4-6"
+# Create a DATA FRAME with an ID and lifespan column
+create_id_starting.table(sex = "female") %>% 
+  mutate(lifespan = fetch_id_duration.lifespan(ID)) %>% 
+  # Count data AND find longest lifespan
+  summarise(number_females = n(),
+            oldest = max(lifespan, na.rm = TRUE))
+```
+
+# GOAL 3: ✅ A simple example with censored data
+
+## [RECAP:]{style="color:#ff2c2d;"} What is censored data?
+
+::: incremental
+-   **left-censored**: Individual was born before study period.
+
+-   **right-censored**: Individual died after study period.
+
+-   **uncensored**: Individual born *and* died during study period.
+:::
+
+## How do we find censored individuals? {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|4-5|6-7"
+# Create a DATA FRAME with all female IDs
+create_id_starting.table(sex = "female") %>%
+  mutate(
+    #If individual is born before 1997-01-01 they are LEFT CENSORED
+    left_censored = fetch_id_is.censored.left(ID, at = "1997-01-01"),
+    #If individual is still alive at 1997-12-31 they are RIGHT CENSORED
+    right_censored = fetch_id_is.censored.right(ID, at = "1997-12-31"),
+    )
+```
+
+## How many censored individuals are there? {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "9|10|11-12"
+# Create a DATA FRAME with all female IDs
+create_id_starting.table(sex = "female") %>%
+  mutate(
+    #If individual is already alive at 1997-01-01 they are LEFT CENSORED
+    left_censored = fetch_id_is.censored.left(ID, at = "1997-01-01"),
+    #If individual is still alive at 1997-12-31 they are RIGHT CENSORED
+    right_censored = fetch_id_is.censored.right(ID, at = "1997-12-31"),
+    ) %>% 
+  #Count how many are left and/or right censored
+  group_by(left_censored, right_censored) %>% 
+  ## REMEMBER: TO RETURN A DATAFRAME WE NEED TO USE COUNT() OR SUMMARISE()
+  count()
+```
+
+## How do we remove censored individuals? {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "9-10|11-12"
+# Create a DATA FRAME with all female IDs
+create_id_starting.table(sex = "female") %>%
+  mutate(
+    #If individual is already alive at 1997-01-01 they are LEFT CENSORED
+    left_censored = fetch_id_is.censored.left(ID, at = "1997-01-01"),
+    #If individual is still alive at 1997-12-31 they are RIGHT CENSORED
+    right_censored = fetch_id_is.censored.right(ID, at = "1997-12-31"),
+    ) %>% 
+  #Keep only individuals that are uncensored
+  filter(!left_censored & !right_censored) %>% 
+  #How many individuals is this?
+  count()
+```
+
+## How do we remove censored individuals? {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3|4"
+# Easiest method is just to filter uncensored individuals
+create_id_starting.table(sex = "female") %>% 
+  filter(!fetch_id_is.censored(ID, from = "1997-01-01", to = "1997-12-31")) %>% 
+  count()
+```
+
+# 🤓 Need more practice?
+
+## Try out the introduction on RStudio Cloud!
+
+-   <https://rstudio.cloud/learn/primers/2>

@@ -1,0 +1,372 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 7"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+----------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+----------------------------------------------------------
+
+### GOAL 1: The overlap argument
+
+<br>
+
+### GOAL 2: Dealing with NAs (`tidyr::replace_na()`)
+
+----------------------------
+
+## The overlap argument {auto-animate="true"}
+
+![](img/overlap_img.jpeg){width="400" style="margin: 0px" fig-align="center"}
+
+## The overlap argument {auto-animate="true"}
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1|2-3|4"
+create_id_starting.table(lifestage = "philopatric",
+                         from = "1998-01-01",
+                         to = "1998-12-31",
+                         lifestage.overlap = "?")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### Start
+
+Individual started the specified life stage during the focal period.
+
+[ |----------]
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                         lifestage.overlap = "start")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### End
+
+Individual ended the specified life stage during the focal period.
+
+[---------|  ]
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                         lifestage.overlap = "end")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### Within
+
+Individual started and ended the specified life stage during the focal period.
+
+[  |------|  ]
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                         lifestage.overlap = "within")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### Within
+
+This is the same as filtering by overlap 'start' and 'end'.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5-6|8-9"
+within <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                   lifestage.overlap = "within")
+starters <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                     lifestage.overlap = "start")
+enders <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                   lifestage.overlap = "end")
+
+#Compare within to individuals that match BOTH start and end
+waldo::compare(within$ID, starters$ID[starters$ID %in% enders$ID])
+```
+
+## The overlap argument {auto-animate="true"}
+
+### Always
+
+Individual was in the focal life stage during the whole period.
+
+[------------]
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                         lifestage.overlap = "always")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### Any (default)
+
+Individual was in the focal life stage at some point within the focal period.
+
+[ ?--? ]
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                         lifestage.overlap = "any")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### Any (default)
+
+This is the same as combining outputs from each of 'start', 'end', and 'always'.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5-6|7-8|10-12"
+any <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                lifestage.overlap = "any")
+starters <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                     lifestage.overlap = "start")
+enders <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                   lifestage.overlap = "end")
+always <- create_id_starting.table(lifestage = "philopatric", from = "1998-01-01", to = "1998-12-31",
+                                   lifestage.overlap = "always")
+
+#Compare any to individuals that match at least one of start, end, or always
+waldo::compare(sort(any$ID),
+               sort(unique(c(starters$ID, enders$ID, always$ID))))
+```
+
+## The overlap argument {auto-animate="true"}
+
+### clan.overlap can be used the same way
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3|4|5"
+### Find individuals that ended their time in Airstrip during this period 
+### (i.e. dispersed)
+create_id_starting.table(clan = "A",
+                         from = "1998-01-01", to = "1998-12-31",
+                         clan.overlap = "end")
+```
+
+## The overlap argument {auto-animate="true"}
+
+### clan.overlap can be used the same way
+
+```{r}
+#| echo: false
+IDs <- create_id_starting.table(clan = "A",
+                                from = "1998-01-01", to = "1998-12-31",
+                                clan.overlap = "end") %>% 
+  pull()
+
+
+test_interval <- lubridate::interval(start = "1998-01-01",
+                                     end = "1998-12-31")
+
+create_id_life.history.table(ID = IDs) %>% 
+  mutate(interval = lubridate::interval(start = starting_date, ending_date)) %>% 
+  filter(lubridate::int_overlaps(interval, test_interval)) %>% 
+  select(ID:ending_date)
+```
+
+## The overlap argument {auto-animate="true"}
+
+### clan.overlap and lifestage.overlap
+
+Find individuals that match lifestage.overlap *then* check if these individuals also match clan.overlap. Most appropriate for multiple lifestages.
+
+## The overlap argument {auto-animate="true"}
+
+### EXAMPLE:
+
+Check individual was alive for all of 1998.
+
+```{r}
+#| echo: true
+(all_alive <- create_id_starting.table(lifestage = "!dead",
+                                       from = "1998-01-01", to = "1998-12-31",
+                                       lifestage.overlap = "always"))
+```
+
+## The overlap argument {auto-animate="true"}
+
+### EXAMPLE:
+
+Check individual was alive for all of 1998 *and* was always in Airstrip (i.e. no dispersers).
+
+```{r}
+#| echo: true
+(all_alive_A <- create_id_starting.table(lifestage = "!dead",
+                                         from = "1998-01-01", to = "1998-12-31",
+                                         lifestage.overlap = "always",
+                                         clan = "A",
+                                         clan.overlap = "always"))
+```
+
+## The overlap argument {auto-animate="true"}
+
+### EXAMPLE:
+
+```{r}
+#| echo: false
+create_id_life.history.table(ID = setdiff(all_alive, all_alive_A)$ID[1:2]) %>%
+  select(ID:ending_date)
+```
+
+# Dealing with NAs
+
+## Identifying NAs {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-4"
+# Data to start with
+hyenas <- extract_database_table("hyenas") %>% 
+  filter(birthdate > "2010-01-01") %>% 
+  select(ID:father)
+
+head(hyenas, n = 5)
+```
+
+## Identifying NAs {auto-animate="true"}
+
+### NAs in 1 column
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+hyenas %>% 
+  filter(is.na(mothergenetic))
+```
+
+## Identifying NAs {auto-animate="true"}
+
+### NAs in >1 column
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+hyenas %>% 
+  filter(is.na(mothergenetic) & is.na(father))
+```
+
+## Identifying NAs {auto-animate="true"}
+
+### NAs in either column
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+hyenas %>% 
+  filter(is.na(mothergenetic) | is.na(father))
+```
+
+## Identifying NAs {auto-animate="true"}
+
+### NAs in either column
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3"
+hyenas %>% 
+  filter(if_any(.cols = c(mothergenetic, father),
+                .fns = is.na))
+```
+
+## Remove NAs {auto-animate="true"}
+
+### `tidyr::replace_na()` for 1 column
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3"
+extract_database_table("carnivores") %>% 
+  mutate(groupsize2 = tidyr::replace_na(groupsize,
+                                       replace = 1)) %>% 
+  filter(is.na(groupsize)) %>% 
+  select(date_time, species, groupsize, groupsize2)
+```
+
+## Remove NAs {auto-animate="true"}
+
+### `tidyr::replace_na()` for many
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4|5|6"
+extract_database_table("carnivores") %>% 
+  filter(if_any(.cols = c(groupsize, latitude, longitude),
+                .fns = is.na)) %>% 
+  tidyr::replace_na(list(groupsize = 1,
+                         latitude = -3.16,
+                         longitude = 35.6)) %>% 
+  select(groupsize, latitude, longitude)
+```
+
+## Add NAs {auto-animate="true"}
+
+### `dplyr::na_if()`
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-3"
+extract_database_table("carnivores") %>% 
+  # Replace an uncertain category with NA
+  mutate(species2 = dplyr::na_if(species, "gj?")) %>% 
+  filter(species == "gj?") %>% 
+  select(date_time, species, species2)
+```
+# [HOMEWORK:]{style="color:#ff2c2d;"} Nothing this week!

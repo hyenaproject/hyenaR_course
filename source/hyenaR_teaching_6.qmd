@@ -1,0 +1,405 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 6"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# [Recap]{style="color:#ff2c2d;"}: What did we cover last week?
+
+## Wide vs. long formats {auto-animate="true"}
+
+### WIDE FORMAT
+
+```{r}
+#| echo: false
+(tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   reshape_row_date.seq(clan, from = "1997-07-01", length.out = 1, by = "6 months") %>%
+   mutate(
+     to = date + months(6) - lubridate::days(1),
+     clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+   ) %>% 
+   tidyr::pivot_wider(names_from = clan, values_from = clan_size) %>% 
+   head(1) -> wide_format)
+```
+
+### LONG FORMAT
+
+```{r}
+#| echo: false
+(tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+   reshape_row_date.seq(clan, from = "1997-07-01", length.out = 1, by = "6 months") %>%
+   mutate(
+     to = date + months(6) - lubridate::days(1),
+     clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+   ) %>% 
+   filter(date == "1997-07-01") %>% 
+   head(8) -> long_format)
+```
+
+## Pivoting {auto-animate="true"}
+
+![](https://oliviergimenez.github.io/reproducible-science-workshop/slides/assets/img/tidyr-longer-wider.gif){style="margin: 0px" fig-align="center"}
+
+## Last observation v. death date {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Last observation is the last record in the sightings table
+fetch_id_date.observation.last(ID = "A-001")
+```
+<br>
+```{r}
+#| echo: true
+# Death date is (usually) the day AFTER last sighting
+fetch_id_date.death(ID = "A-001")
+```
+
+## New `hyenaR` functions {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Is individual > 2yo?
+fetch_id_is.adult(ID = "A-011", at = "1997-01-01")
+```
+<br>
+```{r}
+#| echo: true
+# Age at death
+fetch_id_duration.lifespan(ID = "A-011")
+```
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+<br>
+
+### GOAL 1: HOMEWORK
+
+<br>
+
+### GOAL 2: LOOK BACK ON WHAT WE'VE COVERED
+
+<br>
+
+### GOAL 3: PLAN NEXT STEPS
+
+# [HOMEWORK (TASK 1):]{style="color:#ff2c2d;"}<br>Filter sightings of all three jackal species from the carnivores table (bj, gj, sj).
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER & ARJUN & EVE
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table(tbl.names = "carnivores") %>%
+  filter(species %in% c("bj","gj","sj")) %>% 
+  select(date_time, species, groupsize)
+```
+
+# [HOMEWORK (TASK 2):]{style="color:#ff2c2d;"}<br>Determine total sightings of each species in each year.
+
+## Our attempts {auto-animate="true"}
+
+::: columns
+::: {.column width="33%"}
+### OLIVER
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table(tbl.names = "carnivores") %>%
+  filter(species %in% c("bj","gj","sj")) %>%
+  mutate(year = year(date_time)) %>%
+  group_by(species, year) %>%
+  summarise(n = length(species)) %>%
+  ungroup()
+```
+:::
+
+::: {.column width="33%"}
+### ARJUN
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table("carnivores") %>% 
+  filter(species %in% c("bj", "gj", "sj")) %>% 
+  mutate(year = lubridate::year(date_time)) %>%
+  group_by(species, year) %>% 
+  summarize(n = sum(species==species)) %>%
+  ungroup()
+```
+:::
+
+::: {.column width="33%"}
+### EVE
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table("carnivores") %>% 
+  filter(species %in% c("bj", "gj", "sj")) %>% 
+  mutate(year = lubridate::year(date_time)) %>%
+  group_by(year, species) %>%
+  summarize(n = sum(groupsize)) %>% 
+  ungroup()
+```
+:::
+:::
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5|6-7|8"
+extract_database_table(tbl.names = "carnivores") %>%
+  filter(species %in% c("bj","gj","sj")) %>%
+  ## Use lubridate to extract year
+  mutate(year = year(date_time)) %>%
+  group_by(species, year) %>%
+  ## Count length of the species column in each species/year combo
+  summarise(n = length(species)) %>%
+  ungroup()
+```
+
+## Our attempts {auto-animate="true"}
+
+### ARJUN
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5|6-7|8"
+extract_database_table("carnivores") %>% 
+  filter(species %in% c("bj", "gj", "sj")) %>% 
+  ## Use lubridate to extract year
+  mutate(year = lubridate::year(date_time)) %>%
+  group_by(species, year) %>% 
+  ## Count the number of times that species matches species of the species/year combo
+  summarize(nsight = sum(species==species)) %>%
+  ungroup()
+```
+
+## Our attempts {auto-animate="true"}
+
+### EVE
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5|6-7|8"
+extract_database_table("carnivores") %>% 
+  filter(species %in% c("bj", "gj", "sj")) %>% 
+  ## Use lubridate to extract year
+  mutate(year = lubridate::year(date_time)) %>%
+  group_by(year, species) %>%
+  ## Sum the groupsize columns within each year/species combo
+  summarize(sightings = sum(groupsize)) %>% 
+  ungroup()
+```
+
+## The `na.rm` argument
+
+::: {.fragment}
+```{r}
+#| echo: true
+numbers <- c(1, 2, 3, NA, 5)
+
+sum(numbers)
+```
+:::
+
+<br>
+
+::: {.fragment}
+```{r}
+#| echo: true
+sum(numbers, na.rm = TRUE)
+```
+:::
+
+## Our attempts {auto-animate="true"}
+
+### LIAM (count total group size)
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-6|7|8-9|10|11-13|14-15"
+extract_database_table(tbl.names = "carnivores") %>%
+  filter(species %in% c("bj","gj","sj")) %>%
+  # Deal with cases where there are repeated measurements
+  # when there are duplicates (species/date_time) only use the first record
+  group_by(date_time, species) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  ## Use lubridate to extract year 
+  mutate(year = year(date_time)) %>%
+  group_by(species, year) %>%
+  ## Sum the groupsize columns within each year/species combo
+  ## BUT IGNORE NAs
+  summarise(n = sum(groupsize, na.rm = TRUE),
+            #Alternative way to ungroup after summarise
+            .groups = "drop")
+```
+
+## Our attempts {auto-animate="true"}
+
+### LIAM (count total records)
+```{r}
+#| echo: true
+#| code-line-numbers: "8-9"
+extract_database_table(tbl.names = "carnivores") %>%
+  filter(species %in% c("bj","gj","sj")) %>%
+  group_by(date_time, species) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  mutate(year = year(date_time)) %>%
+  group_by(species, year) %>%
+  ## Count number of rows in each group
+  summarise(n = n(),
+            #Alternative way to ungroup after summarise
+            .groups = "drop")
+```
+
+# [HOMEWORK (TASK 3):]{style="color:#ff2c2d;"}<br>Convert table to wide format so that we have one row per year and one column per species
+
+## Our attempts {auto-animate="true"}
+
+::: columns
+::: {.column width="50%"}
+### OLIVER
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table(tbl.names = "carnivores") %>%
+  filter(species %in% c("bj","gj","sj")) %>%
+  mutate(year = year(date_time)) %>%
+  group_by(species, year) %>%
+  summarise(n = length(species)) %>%
+  ungroup() %>% 
+  pivot_wider(names_from = species,
+              values_from = n) %>% 
+  slice(1)
+```
+
+### ARJUN
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table("carnivores") %>% 
+  filter(species %in% c("bj", "gj", "sj")) %>% 
+  mutate(year = lubridate::year(date_time)) %>%
+  group_by(species, year) %>% 
+  summarize(nsight = sum(species==species)) %>%
+  ungroup() %>% 
+  tidyr::pivot_wider(names_from = species,
+                     values_from = nsight) %>% 
+  slice(1)
+```
+:::
+
+::: {.column width="50%"}
+### EVE
+```{r}
+#| echo: true
+#| code-fold: true
+extract_database_table("carnivores") %>% 
+  filter(species %in% c("bj", "gj", "sj")) %>% 
+  mutate(year = lubridate::year(date_time)) %>%
+  group_by(year, species) %>%
+  summarize(sightings = sum(groupsize)) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = species,
+              values_from = sightings) %>% 
+  slice(1)
+```
+:::
+:::
+
+# -- [RECAP]{style="color:#ff2c2d;"} --
+
+------------------------------------------------------------------------
+
+## LESSON 1
+
+- Structure of `hyenaR` (GitHub, SQL Database)
+- Build and load the database
+- Types of `hyenaR` functions (create, fetch, find)
+- `mutate()`/`group_by()`/`summarise()`
+
+----
+
+## LESSON 2
+
+- `create_id_starting.table()`
+- Filter rows with logical values (TRUE/FALSE; `filter()`)
+- Filter by row number (`slice()`)
+- Order dataframe (`arrange()`)
+- Extract reproductive success (`fetch_id_number.offspring()`)
+- Identify censored individuals (`fetch_id_is.censored()`)
+
+----
+
+## LESSON 3
+
+- Extract rank data (e.g. `fetch_id_rank.sex.std()`)
+- Filter columns (`select()`)
+- Generate multiple rows for the each ID, clan etc. (`reshape_row_date.seq()`)
+
+----
+
+## LESSON 4
+
+- `lubridate` package for working with dates
+- `tidyr` package to pivot wider/longer
+- Avoid grouped data (`ungroup()`)
+
+----
+
+## LESSON 5
+
+- Age of individuals (`fetch_id_duration.lifespan()` & `fetch_id_age()`)
+- Last observation v. death date
+
+# -- [NEXT STEPS]{style="color:#ff2c2d;"} --
+
+------------------------------------------------------------------------
+
+## FUTURE TOPICS
+
+- Plotting (`ggplot2`)
+- 'Advanced' filtering (string matching, any/all functions)
+- Dataframe joins (combined records from two dataframes)
+- 'Advanced' `dplyr` methods (list columns, efficiently repeat tasks over multiple columns/rows)
+- Loops

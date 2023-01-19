@@ -1,0 +1,309 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 9"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "6"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working text
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+----------------------------------------------------------------------
+
+### GOAL 1: `create_sample_starting.table()`
+
+<br>
+
+### GOAL 2: Working with text columns
+
+# create_sample_starting.table
+
+## Return sample records {auto-animate="true"}
+
+<br>
+
+### All samples for a given ID
+
+```{r}
+#| echo: true
+create_sample_starting.table(ID = "A-010")
+```
+
+## Return sample records {auto-animate="true"}
+
+<br>
+
+### All samples for a date range
+
+```{r}
+#| echo: true
+create_sample_starting.table(from = "1999-01-01", to = "2000-01-01")
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+> Simple, Consistent Wrappers for Common String Operations
+
+<br>
+
+'string' = 'character string'
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Identify samples from liver
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3"
+create_sample_starting.table() %>% 
+  mutate(is_liver = stringr::str_detect(string = type,
+                                        pattern = "liver"))
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Count liver samples per year
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-3|4-7"
+create_sample_starting.table() %>% 
+  filter(stringr::str_detect(string = type,
+                             pattern = "liver")) %>% 
+  mutate(year = lubridate::year(collection_time)) %>% 
+  group_by(year) %>% 
+  count() %>% 
+  ungroup()
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Count liver OR kidney samples per year
+
+```{r}
+#| echo: true
+#| code-line-numbers: "3"
+create_sample_starting.table() %>% 
+  filter(stringr::str_detect(string = type,
+                             pattern = "liver|kidney")) %>% 
+  mutate(year = lubridate::year(collection_time)) %>% 
+  group_by(year) %>% 
+  count() %>% 
+  ungroup()
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Count number of unique individuals from which we have brain samples
+
+```{r}
+#| echo: true
+#| eval: false
+create_sample_starting.table()
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Count number of unique individuals from which we have brain samples
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-line-numbers: "2-3|4|5|6"
+create_sample_starting.table() %>% 
+  filter(stringr::str_detect(string = type,
+                             pattern = "brain")) %>% 
+  group_by(ID) %>% 
+  summarise() %>% 
+  nrow()
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Find records of strep or disease in injuries table
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3|4|5|6"
+extract_database_table("injuries") %>% 
+  filter(stringr::str_detect(tolower(cause),
+                             pattern = "strep|disease")) %>% 
+  mutate(year = lubridate::year(date_time)) %>% 
+  group_by(year) %>% 
+  summarise(n_disease = n())
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Find records of strep or disease in injuries table
+
+```{r}
+#| echo: true
+#| code-fold: true
+plot_data <- extract_database_table("injuries") %>% 
+  filter(stringr::str_detect(tolower(cause), pattern = "strep|disease")) %>% 
+  mutate(year = lubridate::year(date_time)) %>% 
+  group_by(year) %>% 
+  summarise(n_disease = n())
+
+ggplot(data = plot_data) +
+  geom_col(aes(x = year, y = n_disease)) +
+  labs(y = "Number of diseased individuals sighted",
+       title = "Number of disease sightings per year",
+       subtitle = "Includes sightings caused by both streptococcus and other disease") +
+  scale_x_continuous(limits = c(1996, NA)) +
+  theme_classic() +
+  theme(axis.title.x = element_blank())
+```
+
+## Using `stringr` to filter text columns {auto-animate="true"}
+
+<br>
+
+### Other useful functions
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4"
+## Replace character with something new
+stringr::str_replace_all(string = "liver_kidney/brain",
+                         pattern = "_|/",
+                         replacement = ", ")
+```
+::: fragment
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3"
+## Remove unwanted characters
+stringr::str_remove_all(string = "sample_1_A",
+                        pattern = "_")
+```
+:::
+
+::: fragment
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+## Remove unwanted white space
+stringr::str_trim(string = "     new den  ")
+```
+:::
+
+# [HOMEWORK:]{style="color:#ff2c2d;"} The same as last week!
+
+## [TASK 1:]{style="color:#ff2c2d;"}
+
+### Use `create_id_starting.table()` to find all individuals born in main clans in the years 1997 - 2021 (where we have full year observation).
+
+<br>
+
+::: fragment
+### How many individuals have been born in total during this period?
+:::
+
+## [TASK 2:]{style="color:#ff2c2d;"}
+
+### Extract individual birth clan, birth date, sex, and lifespan.
+
+<br>
+
+::: fragment
+### How many individuals have missing data?
+:::
+
+<br>
+
+::: fragment
+### How would you interpet NAs in each column?
+:::
+
+## [TASK 3:]{style="color:#ff2c2d;"}
+
+### Extract the *year* of birth for each individual.
+
+<br>
+
+::: fragment
+### In which year were the most cubs born?
+:::
+
+<br>
+
+::: fragment
+### Is the most productive year the same for all clans?
+:::
+
+<br>
+
+::: fragment
+### BONUS: Use filter to return a data frame with only the best year(s) for each clan?
+:::
+
+## [TASK 4:]{style="color:#ff2c2d;"}
+
+### Extract the *month* of birth for each individual.
+
+<br>
+
+::: fragment
+### What was the most productive month in the crater from 1997-2021?
+:::
+
+<br>
+
+::: fragment
+### How many cubs were produced in that month?
+:::

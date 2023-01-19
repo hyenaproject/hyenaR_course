@@ -1,0 +1,533 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 4"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## NEW PACKAGE: Working with dates!
+library(tidyr) ## NEW PACKAGE: Extra data wrangling functions!
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# [Recap]{style="color:#ff2c2d;"}: What did we cover last week?
+
+## EXAMPLE 1: Hierarchy of Airstrip females
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4|6|7"
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  at = "2007-01-01"
+) %>% 
+  mutate(rank = fetch_id_rank.sex(ID = ID, at = "2007-01-01")) %>% 
+  arrange(rank)
+```
+
+## EXAMPLE 2: Change in female rank
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-3|6|7|8|9|11-13|14"
+## TIP: DEFINE REPEATED VALUES ONCE
+start_date <- "2007-01-01"
+end_date   <- "2008-01-01"
+
+create_id_starting.table(
+  sex = "female",
+  clan = "A",
+  from = start_date, to = end_date,
+  lifestage = "!dead", lifestage.overlap = "always" 
+)  %>% 
+  mutate(start_rank = fetch_id_rank.sex.std(ID = ID, at = start_date),
+         end_rank = fetch_id_rank.sex.std(ID = ID, at = end_date),
+         rank_change = end_rank - start_rank) %>% 
+  arrange(rank_change)
+```
+
+## EXAMPLE 3: Plot change in rank over time {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4|5|7-8|9|10"
+create_id_starting.table(
+  sex = "female",
+  clan = "S",
+  from = "2000-01-01", to = "2002-01-01",
+  lifestage = "!dead", lifestage.overlap = "any" 
+)  %>% 
+  reshape_row_date.seq(ID, from = "2000-01-01", to = "2002-01-01",
+                       by = "month") %>% 
+  mutate(rank = fetch_id_rank.sex.std(ID = ID, at = date)) %>% 
+  filter(!is.na(rank))
+```
+
+## EXAMPLE 3: Plot change in rank over time {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| fig.width: 7.5
+#| fig.height: 4.5
+#| code-fold: true
+plot_data <- create_id_starting.table(
+  sex = "female",
+  clan = "S",
+  from = "2000-01-01", to = "2002-01-01",
+  lifestage = "!dead", lifestage.overlap = "any" 
+)  %>% 
+  reshape_row_date.seq(ID, from = "2000-01-01", to = "2002-01-01",
+                       by = "month") %>% 
+  mutate(rank = fetch_id_rank.sex.std(ID = ID, at = date)) %>% 
+  filter(!is.na(rank))
+
+last_record <- plot_data %>% 
+  group_by(ID) %>% 
+  slice(n())
+
+ggplot() +
+  geom_line(data = plot_data,
+            aes(x = date, y = rank, group = ID, colour = ID), size = 1) +
+  geom_text(data = last_record,
+            aes(x = date + 50, y = rank, label = ID, colour = ID), size = 3) +
+  labs(x = "", y = "Standardized rank of females (Shamba)") +
+  scale_x_date(date_labels = "%b-%y", date_breaks = "2 month") +
+  coord_cartesian(clip = "off", xlim = c(as.Date(NA), as.Date("2002-01-01"))) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.margin = margin(r = 40, l = 20, t = 20))
+```
+
+# [Recap]{style="color:#ff2c2d;"}: Any questions after last week?
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+<br>
+
+### GOAL 1: HOMEWORK - Find the oldest individual in each clan
+
+<br>
+
+### GOAL 2: BONUS HOMEWORK - Size of clans over time
+
+<br>
+
+### GOAL 3: `{lubridate}`
+
+<br>
+
+### GOAL 4: `{tidyr}`
+
+# [HOMEWORK:]{style="color:#ff2c2d;"} Find the oldest individual in each clan
+
+## Our attempts {auto-animate="true"}
+
+::: columns
+::: {.column width="30%"}
+### OLIVER
+```{r}
+#| echo: true
+#| code-fold: true
+date <- "2000-01-01"
+create_id_starting.table(
+  clan = find_clan_name.all(main.clans = TRUE),
+  at = date
+) %>%
+  mutate(age = fetch_id_age(ID = ID, at = date),
+         clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>%
+  select(-age)
+```
+:::
+
+::: {.column width="30%"}
+### EVE
+```{r}
+#| echo: true
+#| code-fold: true
+date <- "2000-01-01"
+create_id_starting.table(at = date, lifestage = "adult", clan = find_clan_name.all(main.clans = TRUE)) %>% 
+  mutate(clan = fetch_id_clan.current(ID = ID, at = date), age = fetch_id_age(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age))
+```
+:::
+
+::: {.column width="30%"}
+### ARJUN
+```{r}
+#| echo: true
+#| code-fold: true
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = "2000-01-01") %>%  
+  mutate(Age = fetch_id_age(ID=ID, at="2000-01-01"),
+         Clan = fetch_id_clan.current(ID = ID, at="2000-01-01")) %>%
+  group_by(Clan) %>%
+  filter(Age == max(Age))
+```
+:::
+:::
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3|4|6-7|8|9|10"
+date <- "2000-01-01"
+create_id_starting.table(
+  clan = find_clan_name.all(main.clans = TRUE),
+  at = date
+) %>%
+  mutate(age = fetch_id_age(ID = ID, at = date),
+         clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>%
+  select(-age)
+```
+
+## Our attempts {auto-animate="true"}
+
+### EVE
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3|4|5|7-8|9|10"
+date <- "2000-01-01"
+create_id_starting.table(
+  at = date,
+  lifestage = "adult",
+  clan = find_clan_name.all(main.clans = TRUE)
+) %>%
+  mutate(clan = fetch_id_clan.current(ID = ID, at = date),
+         age = fetch_id_age(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age))
+```
+
+## Our attempts {auto-animate="true"}
+
+### ARJUN
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|5-6|7|8"
+create_id_starting.table(
+  clan = find_clan_name.all(main.clans = TRUE),
+  at = "2000-01-01"
+) %>%  
+  mutate(Age = fetch_id_age(ID=ID, at="2000-01-01"),
+         Clan = fetch_id_clan.current(ID = ID, at="2000-01-01")) %>%
+  group_by(Clan) %>%
+  filter(Age == max(Age))
+```
+
+## My solution (v1.0) {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3|4|5|7-10|11|12|13-14"
+date <- "2000-01-01"
+create_id_starting.table(
+  clan = find_clan_name.all(main.clans = TRUE),
+  at = date,
+  lifestage = "adult"
+) %>%
+  ## TIP: I prefer lower-case names to minimise typos
+  ## but consistency is key!
+  mutate(age = fetch_id_age(ID = ID, at = date),
+         clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  ## TIP: UNGROUP DATA ONCE YOU'RE FINISHED
+  ungroup()
+```
+
+## My solution (v1.0) {auto-animate="true"}
+
+Grouped data can have unexpected behaviour!
+
+::: columns
+::: {.column width="50%"}
+### GROUPED
+```{r}
+#| echo: true
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age))
+```
+:::
+
+::: {.column width="50%"}
+### UNGROUPED
+```{r}
+#| echo: true
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  ungroup()
+```
+:::
+:::
+
+## My solution (v1.0) {auto-animate="true"}
+
+Grouped data can have unexpected behaviour!
+
+::: columns
+::: {.column width="50%"}
+### GROUPED
+```{r}
+#| echo: true
+#| code-line-numbers: "6"
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  summarise(sd_maxage = sd(age))
+```
+:::
+
+::: {.column width="50%"}
+### UNGROUPED
+```{r}
+#| echo: true
+#| code-line-numbers: "7"
+date <- "2000-01-01"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), at = date, lifestage = "adult") %>%
+  mutate(age = fetch_id_age(ID = ID, at = date), clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  filter(age == max(age)) %>% 
+  ungroup() %>% 
+  summarise(sd_maxage = sd(age))
+```
+:::
+:::
+
+## My solution (v2.0) {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-9|10-11|12|13-14"
+date <- "2000-01-01"
+create_id_starting.table(
+  clan = find_clan_name.all(main.clans = TRUE),
+  at = date,
+  lifestage = "adult"
+) %>%
+  mutate(age = fetch_id_age(ID = ID, at = date),
+         clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  ## TIP: WE CAN ALSO USE SUMMARISE TO UNGROUP
+  summarise(ID = ID[age == max(age)],
+            age = max(age),
+            #Ungroup afterwards (this is default)
+            .groups = "drop")
+```
+
+## My solution (v2.0) {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "13-15"
+date <- "2000-01-01"
+create_id_starting.table(
+  clan = find_clan_name.all(main.clans = TRUE),
+  at = date,
+  lifestage = "adult"
+) %>%
+  mutate(age = fetch_id_age(ID = ID, at = date),
+         clan = fetch_id_clan.current(ID = ID, at = date)) %>%
+  group_by(clan) %>%
+  ## TIP: WE CAN ALSO USE SUMMARISE TO UNGROUP
+  summarise(oldest_adult = ID[age == max(age)],
+            maxage = max(age),
+            ## Using summarise allows us to add more info if needed
+            youngest_adult = ID[age == min(age)],
+            minage = min(age),
+            .groups = "drop")
+```
+
+# [BONUS HOMEWORK:]{style="color:#ff2c2d;"} Size of clans over time
+
+## Our attempts {auto-animate="true"}
+
+### OLIVER
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-9"
+as_tibble(x = seq(as.Date("1996-07-01"), length.out = 10, by = "6 month")) %>%
+  mutate(A = fetch_clan_number.anysex.all(clan = "A", at = value),
+         E = fetch_clan_number.anysex.all(clan = "E", at = value),
+         F = fetch_clan_number.anysex.all(clan = "F", at = value),
+         L = fetch_clan_number.anysex.all(clan = "L", at = value),
+         M = fetch_clan_number.anysex.all(clan = "M", at = value),
+         N = fetch_clan_number.anysex.all(clan = "N", at = value),
+         S = fetch_clan_number.anysex.all(clan = "S", at = value),
+         T = fetch_clan_number.anysex.all(clan = "T", at = value))
+```
+
+## My solution {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2"
+tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+  reshape_row_date.seq(clan, from = "1997-07-01", length.out = 10, by = "6 months")
+```
+
+## My solution {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-6|7"
+tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+  reshape_row_date.seq(clan, from = "1997-07-01", length.out = 10, by = "6 months") %>%
+  mutate(
+    #Use {lubridate} package so that we can manipulate dates better
+    #I prefer to calculate pop/clan size over an interval...
+    to = date + months(6) - lubridate::days(1),
+    clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+  )
+```
+
+## My solution {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "7-8"
+tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+  reshape_row_date.seq(clan, from = "1997-07-01", length.out = 10, by = "6 months") %>%
+  mutate(
+    to = date + months(6) - lubridate::days(1),
+    clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+  ) %>% 
+  #Use {tidyr} to make this the same as Oliver's data
+  tidyr::pivot_wider(names_from = clan, values_from = clan_size)
+```
+
+# Pivotting functions
+
+## Wide vs. long formats {auto-animate="true"}
+
+### WIDE FORMAT
+
+- Each row should have one *unique* value (e.g. date)
+- Each variable is its own column
+- Common for storing/recording data
+- Has many *columns* but fewer *rows*
+- Less suited for `{ggplot2}` and `{tidyverse}` functions
+
+## Wide vs. long formats {auto-animate="true"}
+
+### WIDE FORMAT
+
+```{r}
+#| echo: true
+#| code-fold: true
+tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+  reshape_row_date.seq(clan, from = "1997-07-01", length.out = 10, by = "6 months") %>%
+  mutate(
+    to = date + months(6) - lubridate::days(1),
+    clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+  ) %>% 
+  #Use {tidyr} to make this the same as Oliver's data
+  tidyr::pivot_wider(names_from = clan, values_from = clan_size) %>% 
+  head(1)
+```
+
+## Wide vs. long formats {auto-animate="true"}
+
+### LONG FORMAT
+
+- Each row should have one unique *combination* of values (e.g. date, clan)
+- Each measurement is its own row
+- Has many *rows* but fewer *columns*
+- Better suited for `{ggplot2}` and `{tidyverse}` functions
+
+## Wide vs. long formats {auto-animate="true"}
+
+### LONG FORMAT
+
+```{r}
+#| echo: true
+#| code-fold: true
+tibble(clan = find_clan_name.all(main.clans = TRUE)) %>%
+  reshape_row_date.seq(clan, from = "1997-07-01", length.out = 10, by = "6 months") %>%
+  mutate(
+    to = date + months(6) - lubridate::days(1),
+    clan_size = fetch_clan_number.anysex.all(clan = clan, from = date, to = to)
+  ) %>% 
+  filter(date == "1997-07-01") %>% 
+  head(8)
+```
+
+## Wide vs. long formats {auto-animate="true"}
+
+### LONG FORMAT
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-7|8|9"
+as_tibble(x = seq(as.Date("1996-07-01"), length.out = 10, by = "6 month")) %>%
+  mutate(A = fetch_clan_number.anysex.all(clan = "A", at = value), E = fetch_clan_number.anysex.all(clan = "E", at = value),
+         F = fetch_clan_number.anysex.all(clan = "F", at = value), L = fetch_clan_number.anysex.all(clan = "L", at = value),
+         M = fetch_clan_number.anysex.all(clan = "M", at = value), N = fetch_clan_number.anysex.all(clan = "N", at = value),
+         S = fetch_clan_number.anysex.all(clan = "S", at = value), T = fetch_clan_number.anysex.all(clan = "T", at = value)) %>% 
+  # Use {tidyr} to convert Oliver's data to long format
+  tidyr::pivot_longer(cols = A:T,
+                      names_to = "clan",
+                      values_to = "clan_size")
+```
+
+# [HOMEWORK:]{style="color:#ff2c2d;"} What to do while I'm away!
+
+-----
+
+<br>
+
+### [TASK 1:]{style="color:#ff2c2d;"} Find all uncensored individuals that were born in main clans and reached maturity.
+
+<br>
+
+### [TASK 2:]{style="color:#ff2c2d;"} Calculate the mean and standard deviation of their lifespan
+
+<br>
+
+### [TASK 3:]{style="color:#ff2c2d;"} How does the mean and standard deviation differ between sexes?

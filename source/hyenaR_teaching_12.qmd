@@ -1,0 +1,585 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 12"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+# GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}`
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### List of females and males of main clans with offspring that survived to adulthood (2y), in descending order, and with the information of whether the number of offspring is censored or not.
+
+<br><br>
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [List of females and males of main clans]{style="color:#ff2c2d;"} with offspring that survived to adulthood (2y), in descending order, and with the information of whether the number of offspring is censored or not.
+
+<br><br>
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [List of females and males of main clans]{style="color:#ff2c2d;"} [with offspring that survived to adulthood (2y)]{style="color:#1b91ff;"}, in descending order, and with the information of whether the number of offspring is censored or not.
+
+<br><br>
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [List of females and males of main clans]{style="color:#ff2c2d;"} [with offspring that survived to adulthood (2y)]{style="color:#1b91ff;"}, [in descending order]{style="color:#029666;"}, and with the information of whether the number of offspring is censored or not.
+
+<br><br>
+
+## GOAL 1: 🧑‍🏫 Practical application of `{hyenaR}` {auto-animate="true"}
+
+<br><br>
+
+### [List of females and males of main clans]{style="color:#ff2c2d;"} [with offspring that survived to adulthood (2y)]{style="color:#1b91ff;"}, [in descending order]{style="color:#029666;"}, [and with the information of whether the number of offspring is censored or not.]{style="color:#fda703;"}
+
+<br><br>
+
+## [List of females and males of main clans]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3|4|5"
+start_date <- find_pop_date.observation.first()
+end_date   <- find_pop_date.observation.last()
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date)
+```
+
+## [List of females and males of main clans]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-5"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  #Extract sex
+  mutate(sex = fetch_id_sex(ID))
+```
+
+## [List of females and males of main clans]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-7"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  ## Count number of each sex
+  group_by(sex) %>% 
+  count()
+```
+
+## [List of females and males of main clans]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-6"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  # Only include known sex individuals
+  filter(!is.na(sex)) %>% 
+  group_by(sex) %>% 
+  count()
+```
+
+## [with offspring that survived to adulthood (2y)]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex))
+```
+
+## [with offspring that survived to adulthood (2y)]{style="color:#1b91ff;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-8"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex)) %>% 
+  ## Extract counts of offspring >= 2yo
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2,
+                                                 unit = "year"))
+```
+
+## [in descending order]{style="color:#029666;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex)) %>% 
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2,
+                                                 unit = "year"))
+```
+
+## [in descending order]{style="color:#029666;"} {auto-animate="true"}
+
+<br><br>
+
+```{r}
+#| echo: true
+#| code-line-numbers: "8-9"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex)) %>% 
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2, 
+                                                 unit = "year")) %>% 
+  # Arrange by sex and descending number offspring
+  arrange(sex, desc(nroffspring))
+```
+
+## [and with the information of whether the number of offspring is censored or not.]{style="color:#fda703;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex)) %>% 
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2,
+                                                 unit = "year")) %>% 
+  arrange(sex, desc(nroffspring))
+```
+
+## [and with the information of whether the number of offspring is censored or not.]{style="color:#fda703;"} {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-8"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex),
+         # Check left and right censoring...
+         !fetch_id_is.censored.left(ID, at = start_date),
+         !fetch_id_is.censored.right(ID, at = end_date)) %>% 
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2,
+                                                 unit = "year")) %>% 
+  arrange(sex, desc(nroffspring))
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+What about individuals that were *cubs* at first observation? Technically, these are left censored but we can be confident they have not yet reproduced.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-8"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex),
+         # Individuals are only considered left censored
+         # if they were >2yo at first observation
+         !fetch_id_is.censored.left(ID, at = start_date - lubridate::years(2)),
+         !fetch_id_is.censored.right(ID, at = end_date)) %>% 
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2,
+                                                 unit = "year")) %>% 
+  arrange(sex, desc(nroffspring)) -> all_IDs
+
+all_IDs
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Are *cubs* censored?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5-6"
+# Table with parent and all their offspring
+create_id_offspring.table(ID = all_IDs$ID) %>% 
+  ## Check cubs aren't left censored (should be impossible)
+  mutate(left_censored = fetch_id_is.censored.left(offspringID, at = find_pop_date.observation.first()),
+         ## Check cubs COULD have been observed at 2yo
+         right_censored = fetch_id_date.at.age(offspringID, age = 2, unit = "year") > find_pop_date.observation.last())
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Are *cubs* censored?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-7"
+create_id_offspring.table(ID = all_IDs$ID) %>% 
+  filter(!is.na(offspringID)) %>% 
+  mutate(left_censored = fetch_id_is.censored.left(offspringID, at = find_pop_date.observation.first()),
+         right_censored = fetch_id_date.at.age(offspringID, age = 2, unit = "year") > find_pop_date.observation.last()) %>% 
+  # Count censored individuals
+  group_by(left_censored, right_censored) %>% 
+  count()
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Are *cubs* censored?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-8"
+create_id_offspring.table(ID = all_IDs$ID) %>% 
+  filter(!is.na(offspringID)) %>% 
+  mutate(left_censored = fetch_id_is.censored.left(offspringID, at = find_pop_date.observation.first()),
+         right_censored = fetch_id_date.at.age(offspringID, age = 2, unit = "year") > find_pop_date.observation.last()) %>% 
+  ## EXTRACT PARENTS WITH CENSORED CUBS
+  group_by(parentID) %>% 
+  filter(sum(right_censored) > 0) %>% 
+  summarise()
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Are *cubs* censored?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-8"
+create_id_starting.table(clan = find_clan_name.all(main.clans = TRUE), from = start_date, to = end_date) %>% 
+  mutate(sex = fetch_id_sex(ID)) %>% 
+  filter(!is.na(sex),
+         !fetch_id_is.censored.left(ID, at = start_date),
+         # Censoring with end date 2 years before last observation
+         # will ensure that we only use parents that could not
+         # have censored cubs
+         !fetch_id_is.censored.right(ID, at = end_date - lubridate::years(2))) %>% 
+  mutate(nroffspring = fetch_id_number.offspring(ID, age.mature = 2, unit = "year")) %>% 
+  arrange(sex, desc(nroffspring)) -> all_IDs_trunc
+
+all_IDs_trunc
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Are *cubs* censored?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-7"
+create_id_offspring.table(ID = all_IDs_trunc$ID) %>% 
+  filter(!is.na(offspringID)) %>% 
+  mutate(left_censored = fetch_id_is.censored.left(offspringID, at = find_pop_date.observation.first()),
+         right_censored = fetch_id_date.at.age(offspringID, age = 2, unit = "year") > find_pop_date.observation.last()) %>% 
+  # Count censored individuals
+  group_by(left_censored, right_censored) %>% 
+  count()
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+<br><br>
+
+> ...males are right-censored if they were alive by the [birthdate+2years] of the last genetically typed cub of the clan.
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+We can find the youngest genotyped cub in each clan using `create_id_offspring.table` to identify individuals with assigned fathers.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2|3-4|5-7|8-10"
+# Return all parent-offspring relationships
+create_id_offspring.table() %>% 
+  # Filter only paternity assignment
+  filter(filiation == "father") %>% 
+  # Arrange by clan and birthdate, so youngest cub is at the top
+  mutate(birthclan = fetch_id_clan.birth(offspringID)) %>% 
+  arrange(birthclan, desc(birthdate)) %>% 
+  # Take the first row for clan (i.e. the youngest cub with assigned father)
+  group_by(birthclan) %>% 
+  slice(1)
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+If we want to be *extra* conservative, we could use the date from the clan genotyped least recently.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "11-13"
+# Return all parent-offspring relationships
+create_id_offspring.table() %>% 
+  # Filter only paternity assignment
+  filter(filiation == "father") %>% 
+  # Arrange by clan and birthdate, so youngest cub is at the top
+  mutate(birthclan = fetch_id_clan.birth(offspringID)) %>% 
+  arrange(birthclan, desc(birthdate)) %>% 
+  # Take the first row for clan (i.e. the youngest cub with assigned father)
+  group_by(birthclan) %>% 
+  slice(1) %>% 
+  #Take the birthdate that is the furthest in the past
+  ungroup() %>% 
+  filter(birthdate == min(birthdate)) -> genotype_date
+
+genotype_date$birthdate
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+We could use this date to select males.
+
+```{r}
+#| echo: true
+# Use first and last observation to start with all observed males
+# (but filter them below)
+start_date <- find_pop_date.observation.first()
+end_date   <- find_pop_date.observation.last()
+create_id_starting.table(sex = "male",
+                         clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  filter(!fetch_id_is.censored(ID,
+                               # Include individuals that were cubs at start
+                               censored.left = start_date - lubridate::years(2),
+                               # Right censor based on genotyping date
+                               censored.right = genotype_date$birthdate + lubridate::years(2))) -> maleIDs
+
+maleIDs
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Extract data separately for females. Here we don't worry about the genotyping date and just have to account for cub censoring.
+
+```{r}
+#| echo: true
+# Use first and last observation to start with all observed males
+# (but filter them below)
+start_date <- find_pop_date.observation.first()
+end_date   <- find_pop_date.observation.last()
+create_id_starting.table(sex = "female",
+                         clan = find_clan_name.all(main.clans = TRUE),
+                         from = start_date,
+                         to = end_date) %>% 
+  filter(!fetch_id_is.censored(ID,
+                               # Include individuals that were cubs at start
+                               censored.left = start_date - lubridate::years(2),
+                               # Only individuals with uncensored cubs
+                               censored.right = end_date - lubridate::years(2))) -> femaleIDs
+
+femaleIDs
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} More accurate censoring... {auto-animate="true"}
+
+Combine males and females to get final dataset
+
+```{r}
+#| echo: true
+allIDs <- dplyr::bind_rows(maleIDs, femaleIDs) %>% 
+  mutate(sex = fetch_id_sex(ID),
+         nroffspring = fetch_id_number.offspring(ID,
+                                                 age.mature = 2, unit = "year")) %>% 
+  arrange(sex, desc(nroffspring))
+
+allIDs
+```
+
+## Visualize our results... {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| fig-width: 10
+#| fig-height: 5
+plot_data <- allIDs
+
+ggplot(data = plot_data) +
+  geom_bar(aes(x = nroffspring, fill = sex),
+           colour = "black", size = 0.25) +
+  labs(title = "Reproductive skew for all uncensored individuals",
+       x = "Lifetime reproductive success (offspring >=2yo)",
+       y = "Number of individuals") +
+  scale_x_continuous(breaks = seq(0, 20, 1),
+                     limits = c(-0.5, 20)) +
+  facet_wrap(facets = ~sex, ncol = 2) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text = element_text(colour = "black"),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 10))
+```
+
+## Visualize our results... {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| fig-width: 10
+#| fig-height: 5
+plot_data <- allIDs %>% 
+  filter(nroffspring > 0)
+
+ggplot(data = plot_data) +
+  geom_bar(aes(x = nroffspring, fill = sex),
+           colour = "black", size = 0.25) +
+  labs(title = "Reproductive skew for individuals\nwith atleast 1 offspring",
+       x = "Lifetime reproductive success (offspring >=2yo)",
+       y = "Number of individuals") +
+  scale_x_continuous(breaks = seq(1, 20, 1),
+                     limits = c(0.5, 20)) +
+  facet_wrap(facets = ~sex, ncol = 2) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text = element_text(colour = "black"),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 10))
+```
+
+## Visualize our results... {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+plot_data <- allIDs %>% 
+  filter(nroffspring > 0) %>% 
+  group_by(sex, nroffspring) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(n = case_when(sex == "female" ~ -n,
+                       sex == "male" ~ n))
+
+ggplot() +
+  geom_col(data = plot_data,
+           aes(x = nroffspring, y = n, fill = sex),
+           colour = "black", size = 0.25) +
+  geom_text(aes(y = c(-40, 40),
+                x = 15,
+                colour = c("Female", "Male")),
+            label = c("Female", "Male"), size = 10) +
+  labs(title = "Reproductive skew for individuals\nwith atleast 1 offspring",
+       x = "Lifetime reproductive success (offspring >=2yo)",
+       y = "Number of individuals") +
+  scale_x_reverse(breaks = seq(20, 1, -1)) +
+  scale_y_continuous(limits = c(-120, 120),
+                     breaks = seq(-120, 120, 20),
+                     labels = c(seq(120, 20, -20),
+                                0,
+                                seq(20, 120, 20))) +
+  coord_flip(expand = FALSE) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text = element_text(colour = "black"),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 10))
+```
+
+## Visualize our results... {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+plot_data <- allIDs %>% 
+  filter(nroffspring > 0) %>% 
+  group_by(sex, nroffspring) %>% 
+  count() %>%
+  group_by(sex) %>% 
+  mutate(n = n/sum(n)) %>% 
+  mutate(n = case_when(sex == "female" ~ -n,
+                       sex == "male" ~ n))
+
+
+ggplot() +
+  geom_col(data = plot_data,
+           aes(x = nroffspring, y = n, fill = sex),
+           colour = "black", size = 0.25) +
+  geom_text(aes(y = c(-0.2, 0.2),
+                x = 15,
+                colour = c("Female", "Male")),
+            label = c("Female", "Male"), size = 10) +
+  labs(title = "Reproductive skew for individuals\nwith atleast 1 offspring",
+       x = "Lifetime reproductive success (offspring >=2yo)",
+       y = "Proportion of individuals") +
+  scale_x_reverse(breaks = seq(20, 1, -1)) +
+  scale_y_continuous(limits = c(-0.4, 0.4),
+                     breaks = seq(-0.4, 0.4, 0.1),
+                     labels = c(0.4, 0.3, 0.2, 0.1, 0, 0.1, 0.2, 0.3, 0.4)) +
+  coord_flip(expand = FALSE) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text = element_text(colour = "black"),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 10))
+```
+

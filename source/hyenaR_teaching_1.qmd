@@ -1,0 +1,518 @@
+---
+title: "Data Science with `{hyenaR}`:<br>LESSON 1"
+author: Liam D. Bailey
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Structure of `{hyenaR}`
+
+## The basics
+
+::: {layout-nrow="2" layout-ncol="3"}
+::: {.fragment fragment-index="1"}
+::: {.fragment .fade-out fragment-index="7"}
+![Collect data](img/field_photo.jpg){width="200" style="margin: 0px" fig-align="center"}
+:::
+:::
+
+::: {.fragment fragment-index="2"}
+::: {.fragment .fade-out fragment-index="7"}
+![Update .csv files](img/excel.png){width="200" style="margin: 0px" fig-align="center"}
+:::
+:::
+
+::: {.fragment fragment-index="3"}
+![Upload to GitHub](img/github.png){width="200" style="margin: 0px" fig-align="center"}
+:::
+
+::: {.fragment fragment-index="4"}
+![Download the data](img/internet.jpg){width="200" style="margin: 0px" fig-align="center"}
+:::
+
+::: {.fragment fragment-index="5"}
+![Build the database](img/database.png){width="200" style="margin: 0px" fig-align="center"}
+:::
+
+::: {.fragment fragment-index="6"}
+![Get to work](img/hadley-wickham_square.gif){width="200" style="margin: 0px" fig-align="center"}
+:::
+:::
+
+------------------------------------------------------------------------
+
+![](img/github.png){width="100" fig-align="center"}
+
+------------------------------------------------------------------------
+
+## Why are we using GitHub?
+
+<br>
+
+::: {.fragment fragment-index="1"}
+::: {.fragment .semi-fade-out fragment-index="4"}
+-   Accessible online from anywhere
+:::
+:::
+
+::: {.fragment fragment-index="2"}
+-   Includes version control of data
+:::
+
+::: {.fragment fragment-index="3"}
+-   Can be stored in the same place as our code
+:::
+
+# What is [Git]{.fragment .highlight-red}[Hub]{.fragment .highlight-blue}?
+
+## What is [Git]{style="color:#ff2c2d;"}[Hub]{style="color:#1b91ff;"}?
+
+<br>
+
+::: incremental
+-   [Git]{.level2 style="color:#ff2c2d;"}: A powerful version control system (i.e. we can keep track of how things change)
+
+-   [Git]{.level2 style="color:#ff2c2d;"}[Hub]{style="color:#1b91ff;"}: An online repository for projects run using Git.
+:::
+
+# A (simple) example of [Git]{style="color:#ff2c2d;"}[Hub]{style="color:#1b91ff;"}
+
+------------------------------------------------------------------------
+
+![](img/internet.jpg){width="100" fig-align="center"}
+
+------------------------------------------------------------------------
+
+## Download `{hyenaR}`
+
+<br>
+
+### Use `{drat}` to access the current (stable) version of `{hyenaR}`.
+
+<br>
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-2|4-5|7-8"
+## To download package from other sources
+library(drat)
+
+## Include 'hyenaproject' as a package source
+addRepo("hyenaproject") 
+
+## Download hyenaR
+install.packages("hyenaR")
+```
+
+## Accessing the data
+
+<br>
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "2|4-5"
+library(hyenaR)
+download_package_csv(
+  
+  #Where to download
+  csv.output.folder = "example_git/source_data"
+  
+)
+```
+
+## Accessing the data
+
+![](img/download_data_img.png){width="700"}
+
+------------------------------------------------------------------------
+
+![](img/database.png){width="100" fig-align="center"}
+
+------------------------------------------------------------------------
+
+## Build the database
+
+<br>
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7|9-10"
+build_package_database.full(
+  
+  #Name of database file
+  db.name = "Fisidata_2022_08_10",
+  
+  #Where the .csv files are stored
+  input.folder = "example_git/source_data",
+  
+  #Where the database will be stored
+  db.output.folder = "example_git/source_data"
+)
+```
+
+## Build the database
+
+![](img/db_download.png){width="700"}
+
+------------------------------------------------------------------------
+
+![](img/hadley-wickham_square.gif){width="100" fig-align="center"}
+
+------------------------------------------------------------------------
+
+## How to work with `{hyenaR}`
+
+```{r}
+#| include: false
+#| message: false
+library(hyenaR)
+```
+
+<br>
+
+### STEP 1: Load the database we built
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+```{r}
+#| include: false
+#| message: false
+create_id_starting.table(ID = "A-001") ## So that we cache lifehistory table already
+```
+
+<br>
+
+::: fragment
+### STEP 2: Use a `{hyenaR}` function
+
+```{r}
+#| echo: true
+fetch_id_sex(ID = "A-001")
+```
+:::
+
+# `{hyenaR}` function 'types'
+
+# `create`
+
+## `create`: Create a data frame using hyena data
+
+<br>
+
+### Example 1: Life-history of individuals
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+create_id_life.history.table(
+  
+  ## ID of individual(s) we want to build life-history table for
+  ID = "A-001"
+  
+  )
+```
+
+## `create`: Create a data frame using hyena data
+
+<br>
+
+### Example 2: All litters of an individual {.scrollable}
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+create_litter_starting.table(
+  
+  ## ID of individual(s) we want to find litters from
+  parentID = "A-001"
+  
+  )
+```
+
+# `fetch`
+
+## `fetch`: Return information about target (e.g. ID or clan)
+
+<br>
+
+### Example 1: Sex of individuals
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+fetch_id_sex(
+  
+  ## ID of individual(s) we want to know sex
+  ID = c("A-001", "L-015")
+  
+  )
+```
+
+## `fetch`: Return information about target (e.g. ID or clan)
+
+<br>
+
+### Example 2: Age of individuals at a certain time
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7|9-10"
+fetch_id_age(
+  
+  ## ID of individual(s) we want to know age
+  ID = c("A-001"),
+  
+  ## Date at which we want to know the age
+  at = "1997-05-01",
+  
+  ## Units age is measured in
+  unit = "years"
+  
+  )
+```
+
+## `fetch`: Return information about target (e.g. ID or clan)
+
+<br>
+
+### Example 3: Number of individuals in a clan at a certain time
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7"
+fetch_clan_number(
+  
+  #Clan we want to find size of
+  clan = "S",
+  
+  #Date at which we count number of individuals
+  at = "1996-10-01"
+  
+  )
+```
+
+# `find`
+
+## `find`: (Generally) used to find names of ID/clans
+
+<br>
+
+### Example 1: Name of individuals in a clan at a certain time
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7"
+find_clan_id(
+  
+  #Clan we want to find inhabitants
+  clan = "S",
+  
+  #Date at which we find inhabitants
+  at = "1996-10-01"
+  
+  )
+```
+
+## `find`: (Generally) used to find names of ID/clans
+
+<br>
+
+### Example 2: Name of offspring known to an individual
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4|6-7"
+find_id_id.offspring(
+  
+  #Individual(s) we want to find offspring for
+  ID = "A-001",
+  
+  #Offspring born before this date are counted
+  to = "1996-12-31"
+  
+  )
+```
+
+## `find`: (Generally) used to find names of ID/clans
+
+<br>
+
+### Example 3: Name of all ancestors of an individual
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|3-4"
+find_id_id.ancestor.all(
+  
+  #Individual(s) to find ancestors
+  ID = "A-089"
+  
+  )
+```
+
+# The 'grammar' of `{hyenaR}`
+
+# [verb]{.fragment .highlight-red}\_[target]{.fragment .highlight-red}\_[qualifier]{.fragment .highlight-red}
+
+# [fetch]{.fragment .highlight-red}\_[id]{.fragment .highlight-red}\_[sex]{.fragment .highlight-red}
+
+# Using `{hyenaR}` with `{tidyverse}`
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 1: `create`, `fetch` and `summarise` {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "1|3-4"
+library(tidyverse)
+
+#Create data frame with all offspring of an individual
+create_id_offspring.table(ID = "A-001")
+```
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 1: `create`, `fetch` and `summarise` {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| #| message: false
+#| code-line-numbers: "6-7"
+library(tidyverse)
+
+#Create data frame with all offspring of an individual
+create_id_offspring.table(ID = "A-001") %>% 
+  
+  #Fetch sex of each offspring
+  mutate(sex = fetch_id_sex(ID = offspringID))
+```
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 1: `create`, `fetch` and `summarise` {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "9-11"
+library(tidyverse)
+
+#Create data frame with all offspring of an individual
+create_id_offspring.table(ID = "A-001") %>% 
+  
+  #Fetch sex of each offspring
+  mutate(sex = fetch_id_sex(ID = offspringID)) %>% 
+  
+  #Find number of offspring of each sex
+  group_by(sex) %>% 
+  summarise(n = n())
+```
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 2: `create`, `fetch` and `plot`
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "1-2|4-5|7-8|10-11"
+## Create dataframe of all females in Airstrip in 1996
+create_id_starting.table(
+  
+  ## Sex we want to find
+  sex = "female",
+  
+  ## Clan we want to target
+  clan = "A",
+  
+  ## Date up until which we search
+  to = "1996-12-31")
+```
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 2: `create`, `fetch` and `plot`
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "4-5"
+create_id_starting.table(sex = "female",
+                         clan = "A", to = "1996-12-31") %>% 
+  
+  ## Find number of offspring for each individual over the same period
+  mutate(RS = fetch_id_number.offspring(ID = ID, to = "1996-12-31"))
+```
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 2: `create`, `fetch` and `plot`
+
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+#| code-line-numbers: "5-11"
+create_id_starting.table(sex = "female",
+                         clan = "A", to = "1996-12-31") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID, to = "1996-12-31")) %>% 
+  
+  ## PLOT OUR RESULTS
+  mutate(ID = fct_reorder(ID, RS, .fun = identity)) %>% 
+  {ggplot(data = .) +
+      geom_col(aes(x = ID, y = RS)) +
+      coord_flip() +
+      scale_y_continuous(position = "right") +
+      theme_classic()}
+```
+
+## Using `{hyenaR}` with `{tidyverse}`
+
+<br>
+
+### EXAMPLE 2: `create`, `fetch` and `plot`
+
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+create_id_starting.table(sex = "female",
+                         clan = "A", to = "1996-12-31") %>% 
+  mutate(RS = fetch_id_number.offspring(ID = ID, to = "1996-12-31")) %>% 
+  mutate(ID = fct_reorder(ID, RS, .fun = identity)) %>% 
+  {ggplot(data = .) +
+      geom_col(aes(x = ID, y = RS)) +
+      coord_flip() +
+      scale_y_continuous(position = "right") +
+      theme_classic()}
+```

@@ -1,0 +1,440 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 10"
+format:
+  revealjs:
+    code-overflow: scroll
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "7"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working text
+library(waldo) ## To compare objects
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+### GOAL 1: 📝Homework (Lesson 8)
+
+<br>
+
+### GOAL 3: `select()`/`where()`
+
+<br>
+
+### GOAL 2: `group_by()`/`filter()`
+
+# 📝Homework (Lesson 8)
+
+## [TASK 1:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### Use `create_id_starting.table()` to find all individuals born in main clans in the years 1997 - 2021.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2|3|4"
+cubs <- create_id_starting.table(lifestage = "cub",
+                                 lifestage.overlap = "start",
+                                 from = "1997-01-01", to = "2021-12-31",
+                                 clan = find_clan_name.all(main = TRUE))
+```
+
+## [TASK 1:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### How many individuals have been born in total during this period?
+
+```{r}
+#| echo: true
+nrow(cubs)
+```
+
+## [TASK 1:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+::: callout-tip
+## NOTE:
+
+By itself, 'clan.birth' will *not* help here because it ignores from/to. 'clan.birth' is intended as a filter in *addition* to other arguments.
+:::
+
+```{r}
+#| echo: true
+create_id_starting.table(clan.birth = find_clan_name.all(main = TRUE),
+                         from = "1997-01-01", to = "2021-12-31") %>% 
+  nrow()
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### Extract individual birth clan, birth date, sex, and lifespan.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4|5"
+cubs_wdetails <- cubs %>% 
+  mutate(birth_clan = fetch_id_clan.birth(ID),
+         birth_date = fetch_id_date.birth(ID),
+         sex = fetch_id_sex(ID),
+         lifespan = fetch_id_duration.lifespan(ID))
+
+cubs_wdetails
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+::: callout-tip
+## NOTE:
+
+`fetch_id_duration.lifespan()` and `fetch_id_age(at = death_date)` are the same.
+:::
+
+```{r}
+#| echo: true
+waldo::compare(fetch_id_duration.lifespan(cubs$ID),
+               fetch_id_age(cubs$ID, at = fetch_id_date.death(ID = cubs$ID)))
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### How many individuals have missing data?
+
+```{r}
+#| echo: true
+cubs_wdetails %>% 
+  filter(if_any(.cols = everything(),
+                .fns = is.na)) %>% 
+  nrow()
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### How would you interpet NAs in each column?
+
+::: incremental
+-   **birth clan/birth date**: A mistake in the data! All individuals should have an assigned birth clan and date.
+
+-   **sex**: Sex not (yet) determined. Particularly common for individuals that died young.
+
+-   **lifespan/death date**: Individual is right censored (i.e. hasn't died yet!)
+:::
+
+## [TASK 2:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### [BONUS:]{style="color:#ff2c2d;"} `select()`/`where()`
+
+::: callout-tip
+## NOTE:
+
+If we are just applying one function we can just write the function name.
+:::
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-3"
+cubs_wdetails %>%
+  #Select columns that are numeric
+  select(where(fn = is.numeric))
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### [BONUS:]{style="color:#ff2c2d;"} `select()`/`where()`
+
+::: callout-tip
+## NOTE:
+
+If we want something more complicated we need to include our own function.
+:::
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-3"
+cubs_wdetails %>%
+  #Select columns that contain at least 1 NA
+  select(where(fn = function(x) any(is.na(x))))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### Extract the *year* of birth for each individual.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+cubs_wbirthyr <- cubs_wdetails %>% 
+  mutate(birth_year = lubridate::year(birth_date))
+
+cubs_wbirthyr
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### In which year were the most cubs born?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4|5"
+cubs_wbirthyr %>% 
+  group_by(birth_year) %>% 
+  summarise(total_cubs = n()) %>% 
+  ungroup() %>% 
+  arrange(desc(total_cubs))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### Is the most productive year the same for all clans?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4|5"
+cubs_wbirthyr %>% 
+  group_by(birth_year, birth_clan) %>% 
+  summarise(total_cubs = n()) %>% 
+  ungroup() %>% 
+  arrange(desc(total_cubs))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### [BONUS:]{style="color:#ff2c2d;"} Use filter to return a data frame with only the best year(s) for each clan?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5|6-7"
+cubs_wbirthyr %>% 
+  group_by(birth_year, birth_clan) %>% 
+  summarise(total_cubs = n()) %>% 
+  ungroup() %>% 
+  group_by(birth_clan) %>% 
+  #Return the record that has the max number of cubs in EACH CLAN
+  filter(total_cubs == max(total_cubs))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### [BONUS:]{style="color:#ff2c2d;"} `group_by()`/`filter()`
+
+This allows us to apply filters to each group separately!
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3|4-5"
+cubs_wbirthyr %>% 
+  # Find longest lifespan in each clan!
+  group_by(birth_clan) %>%
+  # Find record that has max lifespan in EACH CLAN
+  filter(lifespan == max(lifespan, na.rm = TRUE))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### [BONUS:]{style="color:#ff2c2d;"} `group_by()`/`filter()`
+
+Find earliest and latest individual(s) born in each year
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-line-numbers: "2|3-4|5-6"
+cubs_wbirthyr %>% 
+  group_by(birth_year) %>% 
+  # Apply two filters with |
+  filter(birth_date == min(birth_date) | birth_date == max(birth_date)) %>% 
+  ungroup() %>% 
+  arrange(birth_year)
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### [BONUS:]{style="color:#ff2c2d;"} `group_by()`/`filter()`
+
+Find earliest and latest individual(s) born in Airstrip each year
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-line-numbers: "2-3|4|5-6|7-8"
+cubs_wbirthyr %>% 
+  # We need to filter here FIRST...
+  filter(birth_clan == "A") %>% 
+  group_by(birth_year) %>% 
+  #min/max are applied to the whole group
+  filter(birth_date == min(birth_date) | birth_date == max(birth_date)) %>% 
+  ungroup() %>% 
+  arrange(birth_year)
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+::: callout-warning
+This is why we always need to be careful to check grouping!!
+:::
+
+::: columns
+::: {.column width="50%"}
+### GROUPED
+
+```{r}
+#| echo: true
+cubs_wbirthyr %>% 
+  group_by(birth_year, birth_clan) %>% 
+  summarise(total_cubs = n())
+```
+:::
+
+::: {.column width="50%"}
+### UNGROUPED
+
+```{r}
+#| echo: true
+cubs_wbirthyr %>% 
+  group_by(birth_year, birth_clan) %>% 
+  summarise(total_cubs = n()) %>% 
+  ungroup()
+```
+:::
+:::
+
+## [TASK 3:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+::: callout-warning
+This is why we always need to be careful to check grouping!!
+:::
+
+::: columns
+::: {.column width="50%"}
+### GROUPED
+
+```{r}
+#| echo: true
+cubs_wbirthyr %>% 
+  group_by(birth_year, birth_clan) %>% 
+  summarise(total_cubs = n()) %>% 
+  filter(total_cubs == max(total_cubs))
+```
+:::
+
+::: {.column width="50%"}
+### UNGROUPED
+
+```{r}
+#| echo: true
+cubs_wbirthyr %>% 
+  group_by(birth_year, birth_clan) %>% 
+  summarise(total_cubs = n()) %>% 
+  ungroup() %>% 
+  filter(total_cubs == max(total_cubs))
+```
+:::
+:::
+
+## [TASK 4:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### Extract the *month* of birth for each individual.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2"
+cubs_wbirthyr_month <- cubs_wbirthyr %>% 
+  mutate(birth_month = lubridate::month(birth_date))
+
+cubs_wbirthyr_month
+```
+
+## [TASK 4:]{style="color:#ff2c2d;"} {auto-animate="true"}
+
+### What was the most productive month in the crater from 1997-2021? How many cubs were produced in that month?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2|3-4|5"
+cubs_wbirthyr_month %>% 
+  group_by(birth_year, birth_month) %>% 
+  summarise(total_cubs = n()) %>% 
+  ungroup() %>% 
+  filter(total_cubs == max(total_cubs))
+```
+
+# 📝[HOMEWORK:]{style="color:#ff2c2d;"} Lesson 10.
+
+## [TASK 1:]{style="color:#ff2c2d;"}
+
+### Create a data frame of all females.
+
+<br>
+
+::: fragment
+### Use `group_by()`/`summarise()` to show how many individuals are left or right censored.
+:::
+
+<br>
+
+::: fragment
+### Filter only un-censored individuals.
+:::
+
+## [TASK 2:]{style="color:#ff2c2d;"}
+
+### Extract lifetime reproductive success of females (consider only offspring that reach atleast 18 months old).
+
+<br>
+
+::: fragment
+### Extract standardised rank within females at the date of adulthood (i.e. when they were 2 years old).
+:::
+
+<br>
+
+::: fragment
+### Inspect the data. Are there any individuals you might exclude?
+:::
+
+## [TASK 3:]{style="color:#ff2c2d;"}
+
+### Create a new column with rank category (top rank \>0 or low ranking \<=0). [HINT:]{style="color:#ff2c2d;"} You might need to use `ifelse`.
+
+<br>
+
+::: fragment
+### What is the mean and SE of lifetime reproductive success in each group? [HINT:]{style="color:#ff2c2d;"} Remember SE = $\frac{sd}{\sqrt N}$
+:::
+
+<br>
+
+::: fragment
+### [BONUS:]{style="color:#ff2c2d;"} Look at the help for the `case_when()` function. Can you use this to make 3 groups instead of 2?
+:::

@@ -1,0 +1,318 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 13"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+#| code-line-numbers: "8"
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+library(skimr) ## Inspect data
+```
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+# GOAL 1: 📝[HOMEWORK:]{style="color:#ff2c2d;"} Lesson 10.
+
+## [TASK 1:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Create a data frame of all females.
+
+```{r}
+#| echo: true
+create_id_starting.table(sex = "female")
+```
+
+## [TASK 1:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Use `group_by()`/`summarise()` to show how many individuals are left or right censored.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-4|5-7"
+create_id_starting.table(sex = "female") %>% 
+  # Find which are left and right censored
+  mutate(left_censor = fetch_id_is.censored.left(ID),
+         right_censor = fetch_id_is.censored.right(ID)) %>% 
+  #Group by and count
+  group_by(left_censor, right_censor) %>% 
+  count()
+```
+
+## [TASK 1:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Filter only un-censored individuals.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-3"
+create_id_starting.table(sex = "female") %>% 
+  # Filter uncensored individuals
+  filter(!fetch_id_is.censored(ID))
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Extract lifetime reproductive success of females (consider only offspring that reach atleast 18 months old).
+
+```{r}
+#| echo: true
+#| code-line-numbers: "3-4"
+create_id_starting.table(sex = "female") %>% 
+  filter(!fetch_id_is.censored(ID)) %>% 
+  # Use age.mature and unit to find individuals
+  mutate(LRS = fetch_id_number.offspring(ID, age.mature = 18, unit = "month"))
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Extract standardised rank within females at the date of adulthood (i.e. when they were 2 years old).
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-7"
+create_id_starting.table(sex = "female") %>% 
+  filter(!fetch_id_is.censored(ID)) %>% 
+  mutate(LRS = fetch_id_number.offspring(ID, age.mature = 18, unit = "month"),
+         #Extract standardised rank within sexes
+         #(i.e. just comparing females to other females)
+         rank = fetch_id_rank.sex.std(ID,
+                                      at = fetch_id_date.at.age(ID, age = 2)))
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Inspect the data. Are there any individuals you might exclude?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "6-8"
+output <- create_id_starting.table(sex = "female") %>% 
+  filter(!fetch_id_is.censored(ID)) %>% 
+  mutate(LRS = fetch_id_number.offspring(ID, age.mature = 18, unit = "month"),
+         rank = fetch_id_rank.sex.std(ID, at = fetch_id_date.at.age(ID, age = 2)))
+
+#Check for NAs
+any(is.na(output$LRS))
+any(is.na(output$rank))
+```
+
+## [TASK 2:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Use `{skimr}` package to inspect data!
+
+**NOTE** We need to look in RStudio because it doesn't work well on the slides!
+
+```{r}
+#| echo: true
+#| eval: false
+skim(output)
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### Create a new column with rank category (top rank \>0 or low ranking \<=0). [HINT:]{style="color:#ff2c2d;"} You might need to use `ifelse`.
+
+```{r}
+#| echo: true
+#| code-line-numbers: "3-4"
+output %>% 
+  filter(!is.na(rank)) %>% 
+  #Create high and low category
+  mutate(rank_cat = ifelse(rank > 0, "high", "low"))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### What is the mean and SE of lifetime reproductive success in each group? [HINT:]{style="color:#ff2c2d;"} Remember SE = $\frac{sd}{\sqrt N}$
+
+```{r}
+#| echo: true
+#| code-line-numbers: "4-7"
+output %>% 
+  filter(!is.na(rank)) %>% 
+  mutate(rank_cat = ifelse(rank > 0, "high", "low")) %>% 
+  #Group-by summarise
+  group_by(rank_cat) %>% 
+  summarise(mean = mean(LRS),
+            se = sd(LRS)/sqrt(n()))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### [BONUS:]{style="color:#ff2c2d;"} Look at the help for the `case_when()` function. Can you use this to make 3 groups instead of 2?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "3-7|8-11"
+output %>% 
+  filter(!is.na(rank)) %>% 
+  #Create 3 categories!
+  mutate(rank_cat = ifelse(rank > 0.33, "rankgrp1",
+                           ifelse(rank <= 0.33 & rank > -0.33,
+                                  "rankgrp2",
+                                  "rankgrp3"))) %>% 
+  #Group-by/summarise
+  group_by(rank_cat) %>% 
+  summarise(mean = mean(LRS),
+            se = sd(LRS)/sqrt(n()))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### [BONUS:]{style="color:#ff2c2d;"} Look at the help for the `case_when()` function. Can you use this to make 3 groups instead of 2?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "3-6|7-10"
+output %>% 
+  filter(!is.na(rank)) %>% 
+  #Do the same thing with case_when()
+  mutate(rank_cat = case_when(rank > 0.33 ~ "rankgrp1",
+                              rank <= 0.33 & rank > -0.33 ~ "rankgrp2",
+                              rank <= -0.33 ~ "rankgrp3")) %>% 
+  #group-by/summarise
+  group_by(rank_cat) %>% 
+  summarise(mean = mean(LRS),
+            se = sd(LRS)/sqrt(n()))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### [BONUS:]{style="color:#ff2c2d;"} Look at the help for the `case_when()` function. Can you use this to make 3 groups instead of 2?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "5-6"
+output %>% 
+  filter(!is.na(rank)) %>% 
+  mutate(rank_cat = case_when(rank > 0.33 ~ "rankgrp1",
+                              rank <= 0.33 & rank > -0.33 ~ "rankgrp2",
+                              #Everything else that doesn't match others
+                              TRUE ~ "rankgrp3")) %>% 
+  group_by(rank_cat) %>% 
+  summarise(mean = mean(LRS),
+            se = sd(LRS)/sqrt(n()))
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### [BONUS:]{style="color:#ff2c2d;"} Look at the help for the `case_when()` function. Can you use this to make 3 groups instead of 2?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|4-5|6-8"
+# Be careful using the TRUE group. It will include *anything* that doesn't match other criteria
+output %>% 
+  mutate(birthclan = fetch_id_clan.birth(ID),
+         clan_grp = case_when(birthclan == "X" ~ "Outside",
+                              TRUE ~ "Main")) %>% 
+  filter(clan_grp == "Main") %>% 
+  group_by(birthclan) %>% 
+  count()
+```
+
+## [TASK 3:]{style="color:#ff2c2d;"}{auto-animate="true"}
+
+<br>
+
+### [BONUS:]{style="color:#ff2c2d;"} Look at the help for the `case_when()` function. Can you use this to make 3 groups instead of 2?
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|4-6"
+# Be careful *without* TRUE. Everything else is NA!
+output %>% 
+  mutate(birthclan = fetch_id_clan.birth(ID),
+         clan_grp = case_when(birthclan %in% find_clan_name.all(main.clans = TRUE) ~ "Main")) %>% 
+  group_by(clan_grp) %>% 
+  count()
+```
+
+## [BONUS:]{style="color:#ff2c2d;"} Plotting{auto-animate="true"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| fig-width: 5
+#| fig-height: 6
+library(ggdist)
+plot_data <- output %>% 
+  filter(!is.na(rank)) %>% 
+  mutate(rank_cat = case_when(rank > 0.33 ~ "rankgrp1",
+                              rank <= 0.33 & rank > -0.33 ~ "rankgrp2",
+                              #Everything else that doesn't match others
+                              TRUE ~ "rankgrp3"))
+
+plot_data_summary <- plot_data %>% 
+  group_by(rank_cat) %>% 
+  summarise(mean = mean(LRS),
+            se = sd(LRS)/sqrt(n()))
+
+ggplot(data = plot_data_summary) +
+  geom_col(aes(x = rank_cat, y = mean)) +
+  geom_errorbar(aes(x = rank_cat, ymin = mean - se, ymax = mean + se), width = 0.2) +
+  scale_x_discrete(labels = c("High", "Medium", "Low"), name = "") +
+  scale_y_continuous(name = "Lifetime reproductive success (mean +- SE)") +
+  theme_classic()
+```
