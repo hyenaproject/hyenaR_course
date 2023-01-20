@@ -19,16 +19,15 @@ Quick Link
 <summary>Quick links</summary>
 
 <!-- toc -->
-- [Lesson 1: xxxxx](https://github.com/LiamDBailey/TidyTuesday/blob/master/plots/2022/Week43.png)
+- [Lesson 1](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html)
   
 <!-- tocstop -->
 
 ***
 
-### [Lesson 1](https://github.com/LiamDBailey/TidyTuesday/blob/master/plots/2022/Week43.png) SOME DETAILS ABOUT LESSON 1
+### [Lesson 1](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html) An introduction to hyenaR. Learn about how the Hyena Project data workflow is structured and the grammar of hyenaR.
 
-will it work to embed slides here?
-![](https://github.com/LiamDBailey/TidyTuesday/blob/master/plots/2022/Week43.png)
+![](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html)
 
 ***
 <!-- 
