@@ -2,8 +2,6 @@
   &nbsp;# hyenaR course material&nbsp;
 </h1>
 
-<base target="_blank">
-
 This repository contains course material for teaching an introduction to the hyenaR package created to work with data from the [Ngorongoro Hyena Project](https://hyena-project.com/). Links for all course slides are provided below. For teachers, original source material for generating slides (.qmd files) are available in the `/source` folder of the repository.
 
 **NOTE:** This repository does not contain any of the hyena data needed to run the code.
@@ -22,6 +20,8 @@ Quick Link
 [LinkedIn]:https://www.linkedin.com/in/liam-bailey-446823118/
 [Website]:https://liamdbailey.com/
 -->
+
+<p>Test opening new tab... <a href="https://www.freecodecamp.org/learn" target="_blank">freeCodeCamp.org</a></p>
 
 ***
 
