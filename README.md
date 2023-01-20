@@ -23,7 +23,7 @@ Quick Link
 
 ***
 
-### [Lesson 1:](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html)
+<h3><a href="https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html" target="_blank">Lesson 1:</a></h3>
 
 An introduction to hyenaR. Learn about how the Hyena Project data workflow is structured and the grammar of hyenaR.
 
