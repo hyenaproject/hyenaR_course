@@ -20,6 +20,21 @@ Quick Link
 
 <!-- toc -->
 - [Lesson 1](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html)
+- [Lesson 2](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_2.html)
+- [Lesson 3](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_3.html)
+- [Lesson 4](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_4.html)
+- [Lesson 5](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_5.html)
+- [Lesson 6](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_6.html)
+- [Lesson 7](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_7.html)
+- [Lesson 8](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_8.html)
+- [Lesson 9](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_9.html)
+- [Lesson 10](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_10.html)
+- [Lesson 11](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_11.html)
+- [Lesson 12](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_12.html)
+- [Lesson 13](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_13.html)
+- [Lesson 14](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_14.html)
+- [Lesson 15](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_15.html)
+- [Lesson 16](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_16.html)
   
 <!-- tocstop -->
 
@@ -27,7 +42,19 @@ Quick Link
 
 ### [Lesson 1](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html) An introduction to hyenaR. Learn about how the Hyena Project data workflow is structured and the grammar of hyenaR.
 
-![](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html)
+ <iframe src="https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_1.html" height="200" width="300" title="Lesson 1"></iframe>
+
+***
+
+### [Lesson 2](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_2.html)
+
+ <iframe src="https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_2.html" height="200" width="300" title="Lesson 1"></iframe>
+
+***
+
+### [Lesson 3](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_3.html)
+
+ <iframe src="https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_3.html" height="200" width="300" title="Lesson 1"></iframe>
 
 ***
 <!-- 
