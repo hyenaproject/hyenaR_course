@@ -19,7 +19,7 @@ Quick Link
 [Twitter]:https://twitter.com/ldbailey255/
 [LinkedIn]:https://www.linkedin.com/in/liam-bailey-446823118/
 [Website]:https://liamdbailey.com/
--->]
+-->
 
 ***
 
