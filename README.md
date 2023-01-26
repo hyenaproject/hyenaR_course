@@ -126,6 +126,12 @@ A practical application of `hyenaR`: Extract monthly female reproduction and cla
 Running for loops in R. Introduce the `{purrr}` package that can be used for looping in the tidyverse.
 
 ***
+
+### [Lesson 17:](https://hyenaproject.github.io/hyenaR_course/hyenaR_teaching_17.html)
+
+Building and debugging functions in R.
+
+***
 <!-- 
 #### Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 <div style="width:300px; height:200px">

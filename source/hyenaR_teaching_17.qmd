@@ -1,0 +1,625 @@
+---
+title: "Data science with `{hyenaR}`:<br>LESSON 17"
+format:
+  revealjs:
+    theme: [moon, css/custom.scss]
+highlight-style: a11y
+self-contained: true
+self-contained-math: true
+---
+
+# 🎉`hyenaR` v0.9.999941🎉
+
+## Use `{drat}` to access the new version of `{hyenaR}`.
+
+```{r}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-2|4-5|7-8"
+## To download package from other sources
+library(drat)
+
+## Include 'hyenaproject' as a package source
+addRepo("hyenaproject") 
+
+## Download hyenaR
+install.packages("hyenaR")
+```
+
+<br>
+
+::: fragment
+```{r}
+#| echo: true
+#| code-line-numbers: "1-2"
+#Check you have the right version (0.9.999941)
+packageVersion("hyenaR")
+```
+:::
+
+# Prepare our workspace
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 1: Load required packages
+
+```{r}
+#| echo: true
+#| message: false
+library(hyenaR) ## For our hyena specific functions
+library(dplyr) ## For most data wrangling
+library(ggplot2) ## For plotting
+library(lubridate) ## Working with dates
+library(tidyr) ## Extra data wrangling functions
+library(stringr) ## Working with text
+library(waldo) ## To compare objects
+library(skimr) ## Inspect data
+library(purrr) ## For loops in the tidyverse
+```
+
+------------------------------------------------------------------------
+
+<br>
+
+### STEP 2: Load the database
+
+```{r}
+#| echo: true
+load_package_database.full(
+  
+  # Location of our database file
+  db.path = "example_git/source_data/Fisidata_2022_08_10.sqlite"
+  
+)
+```
+
+# Today's goals
+
+------------------------------------------------------------------------
+
+<br>
+
+### GOAL 1: 🎉 Introduce the new features of v0.9.999941
+
+<br>
+
+### GOAL 2: 🧑‍🏫 Functions and debugging in R
+
+# GOAL 1: Introduce the new features of v0.9.999941
+
+## Check the NEWS to find out more
+
+```{r}
+#| eval: false
+#| echo: true
+build_vignette_news()
+```
+
+## Much faster! {auto-animate="true"}
+
+```{r}
+#| eval: false
+#| echo: true
+fetch_clan_number.anysex.all(clan = "A", at = "1997-01-01")
+```
+
+<br>
+
+::: columns
+::: {.column width="50%"}
+::: {.fragment fragment-index="1"}
+#### v0.9.99994
+```{r}
+#| eval: true
+#| echo: false
+print("Median time: ~1.04s")
+```
+:::
+:::
+::: {.column width="50%"}
+::: {.fragment fragment-index="2"}
+#### v0.9.999941
+```{r}
+#| eval: true
+#| echo: false
+print("Median time: ~387ms")
+```
+:::
+:::
+:::
+
+<br><br>
+
+::: {.fragment fragment-index="3"}
+### ~3x FASTER!
+:::
+
+# GOAL 2: 🧑‍🏫 Functions and debugging in R
+
+## Why create functions? {auto-animate="true"}
+
+::: incremental
+-   Reproducible, consistent behaviour.
+
+-   Great for collaboration.
+
+-   The 'Rule of Three'
+:::
+
+## Creating a function {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+# Our function name...
+my_function
+```
+
+## Creating a function {auto-animate="true"}
+
+```{r}
+#| echo: true
+#| eval: false
+# Our function name and argument names
+my_function <- function(argument1, argument2){}
+```
+
+## Creating a function {auto-animate="true"}
+
+```{r}
+#| echo: true
+# Our function name and argument names
+my_function <- function(argument1, argument2){
+  
+  # Code between {}
+  argument1 + argument2
+  
+}
+```
+
+::: {.fragment}
+```{r}
+#| echo: true
+my_function(10, 1)
+```
+:::
+
+## Using a function {auto-animate="true"}
+
+You can specify the value of each argument explicitly
+```{r}
+#| echo: true
+my_function(argument1 = 1, argument2 = 3)
+```
+
+::: {.fragment}
+...or use the order or arguments.
+```{r}
+#| echo: true
+my_function(1, 3)
+```
+:::
+
+::: {.fragment}
+Specifying argument names is often better to prevent bugs!
+<br>
+```{r}
+#| echo: true
+my_function(argument2 = 3, argument1 = 1)
+```
+:::
+
+## Using a function {auto-animate="true"}
+
+::: callout-note
+Not all functions need arguments!
+:::
+
+```{r}
+#| echo: true
+day_of_the_week <- function(){
+  format(Sys.Date(), "%A")
+}
+day_of_the_week()
+```
+
+## Default values {auto-animate="true"}
+
+Using default values can make functions more flexible but still user friendly.
+
+::: columns
+::: {.column width="50%"}
+::: {.fragment fragment-index="1"}
+#### This function is inflexible
+```{r}
+#| echo: true
+add <- function(number){
+  
+  number + 1
+  
+}
+add(number = 10)
+```
+:::
+:::
+::: {.column width="50%"}
+::: {.fragment fragment-index="2"}
+#### This function is flexible but more complex
+```{r}
+#| echo: true
+add <- function(number, addition){
+  
+  number + addition
+  
+}
+add(number = 10, addition = 1)
+```
+:::
+:::
+:::
+
+## Default values {auto-animate="true"}
+
+Using default values can make functions easier to use, but still flexible.
+
+<br>
+
+#### This function is flexible but simple to use for the default case!
+```{r}
+#| echo: true
+add <- function(number, addition = 1){
+  
+  number + addition
+  
+}
+add(number = 10)
+add(number = 10, addition = 2)
+```
+
+## What does a function return? {auto-animate="true"}
+
+By default, a function returns the last value output by the code...
+
+```{r}
+#| echo: true
+add <- function(number, addition = 1){
+  
+  number + addition
+  10
+  
+}
+```
+
+What will this return?
+```{r}
+#| echo: true
+#| eval: false
+add(20)
+```
+
+::: {.fragment fragment-index="2"}
+```{r}
+#| echo: false
+#| eval: true
+add(20)
+```
+:::
+
+## What does a function return? {auto-animate="true"}
+
+Use `return()` if you want to be specific.
+
+::: callout-warning
+Everything after `return()` is not run!
+:::
+
+```{r}
+#| echo: true
+add <- function(number, addition = 1){
+  
+  new_number <- number + addition
+  return(new_number)
+  10
+  
+}
+```
+
+What will this return?
+```{r}
+#| echo: true
+#| eval: false
+add(20)
+```
+
+::: {.fragment fragment-index="2"}
+```{r}
+#| echo: false
+#| eval: true
+add(20)
+```
+:::
+
+## What does a function return? {auto-animate="true"}
+
+`return()` can be more efficient!
+
+```{r}
+#| echo: true
+#| code-line-numbers: "1|2-5|6-9|10-13|14-15"
+is_even <- function(object){
+  ## Check if a number is 0...
+  if (object == 0) {
+    output <- NA
+  }
+  ## THEN check if a number is >0 and even
+  if (object > 0 & object %% 2 == 0) {
+    output <- "even"
+  }
+  ## THEN check if a number is >0 and odd
+  if (object > 0 & object %% 2 != 0) {
+    output <- "odd"
+  }
+  ## Return the output
+  output
+}
+```
+
+## What does a function return? {auto-animate="true"}
+
+`return()` can be more efficient!
+
+```{r}
+#| echo: true
+#| code-line-numbers: "2-5"
+is_even_new <- function(object){
+  ## If number is 0...return NA and stop!!
+  if (object == 0) {
+    return(NA)
+  }
+  ## Otherwise...check if a number is >0 and even
+  if (object > 0 & object %% 2 == 0) {
+    output <- "even"
+  }
+  ## and check if a number is >0 and odd
+  if (object > 0 & object %% 2 != 0) {
+    output <- "odd"
+  }
+  ## Return the output
+  output
+}
+```
+
+## What does a function return? {auto-animate="true"}
+
+`return()` can be more efficient!
+
+```{r}
+#| echo: false
+bench::mark(is_even(0), is_even_new(0)) %>% 
+  dplyr::select(expression, median, `itr/sec`) %>% 
+  dplyr::mutate(expression = as.character(expression))
+```
+
+## What if something goes wrong? {auto-animate="true"}
+
+Default error messages are often hard to understand.
+
+```{r}
+#| echo: true
+#| error: true
+add <- function(number, addition = 1){
+  
+  number + addition
+  
+}
+add("B")
+```
+
+## What if something goes wrong? {auto-animate="true"}
+
+Use `stop()` to create your own error message!
+
+```{r}
+#| echo: true
+#| error: true
+add <- function(number, addition = 1){
+  
+  if (is.character(number) | is.character(addition)) {
+    stop("The arguments 'number' and 'addition' cannot be characters!")
+  }
+  number + addition
+  
+}
+add("B")
+```
+
+## What if something goes wrong? {auto-animate="true"}
+
+Use `warning()` to flag things that can work but might cause problems.
+
+```{r}
+#| echo: true
+#| warning: true
+add <- function(number, addition = 1){
+  
+  if (is.character(number) | is.character(addition)) {
+    stop("The arguments 'number' and 'addition' cannot be characters!")
+  }
+  
+  if (is.logical(number) | is.logical(addition)) {
+    warning("Coercing logical value to numeric.\n")
+  }
+  number + addition
+  
+}
+add(number = 10, addition = TRUE)
+```
+
+## Debugging! {auto-animate="true"}
+
+::: incremental
+-   `browser()`
+
+-   `debug()`
+
+-   `trace()`
+:::
+
+## Debugging! {auto-animate="true"}
+
+`browser()` can help debug a function you are creating!
+
+```{r}
+#| echo: true
+#| error: true
+day_of_week <- function(date){
+  if (is.numeric(date)) {
+    stop("Function cannot accept a number")
+  }
+  day <- format(as.Date(date), "%A")
+  paste("You were born on", day)
+}
+day_of_week("12-03-88")
+```
+
+## Debugging! {auto-animate="true"}
+
+The function will stop at the point where we add `browser()`...
+
+```{r}
+#| echo: true
+#| eval: false
+day_of_week <- function(date){
+  browser()
+  if (is.numeric(date)) {
+    stop("Function cannot accept a number")
+  }
+  day <- format(as.Date(date), "%A")
+  paste("You were born on", day)
+}
+day_of_week("12-03-88")
+```
+
+## Debugging! {auto-animate="true"}
+
+Use the 'expr' argument in `browser()` to debug in certain conditions!
+
+```{r}
+#| echo: true
+transform_numbers <- function(n){
+  
+  output <- c()
+  
+  for (i in runif(min = -10, max = 10, n = n)) {
+    
+    output <- append(output, log(i))
+    
+  }
+  
+  return(output)
+  
+}
+```
+```{r}
+#| echo: true
+set.seed(123)
+transform_numbers(10)
+```
+
+## Debugging! {auto-animate="true"}
+
+Use the 'expr' argument in `browser()` to debug in certain conditions!
+
+```{r}
+#| echo: true
+transform_numbers <- function(n){
+  
+  output <- c()
+  
+  for (i in runif(min = -10, max = 10, n = n)) {
+    
+    browser(expr = i <= 0)
+    output <- append(output, log(i))
+    
+  }
+  
+  return(output)
+  
+}
+```
+```{r}
+#| echo: true
+#| eval: false
+set.seed(123)
+transform_numbers(10)
+```
+
+## Debugging! {auto-animate="true"}
+
+`debug()` can be used for any function (even ones you didn't write!)
+
+```{r}
+#| echo: true
+#| eval: false
+debug(day_of_week)
+day_of_week("12-03-88")
+```
+
+::: callout-warning
+You will need to `undebug()` a function (or use `debugonce()`)
+:::
+
+## Debugging! {auto-animate="true"}
+
+If you identify a problem in another function, you can use `trace(edit = TRUE)` to tweak it.
+
+```{r}
+#| echo: true
+date_time <- lubridate::ymd_hms("1999-01-01 00:00:00", tz = "Africa/Dar_es_Salaam")
+as.Date(date_time)
+```
+
+## Debugging! {auto-animate="true"}
+
+Try it yourself.
+
+```{r}
+#| echo: true
+average_age_firstrepro <- function(sex, birth_year, na.rm = FALSE){
+  
+  ## Create start and end date for the target year
+  start_date <- paste('birth_year', "01/01", sep = "_")
+  end_date   <- paste('birth_year', "12/31", sep = "_")
+  
+  ## Extract all individuals born in that year and their age at first birth
+  all_births <- create_id_starting.table(from = start_date, to = end_date,
+                           sex = sex,
+                           lifestage = "cub", lifestage.overlap = "start") %>% 
+    dplyr::mutate(firstbirth = fetch_id_date.birth.first(ID)) %>% 
+    dplyr::mutate(age = fetch_id_age(ID, at = firstbirth))
+  
+  ## Determine an average age at first birth
+  avg_age <- mean(all_births$age, na.rm = na.rm)
+  
+  ## Return the number
+  return(avg_age)
+
+}
+```
+
+## Debugging! {auto-animate="true"}
+
+Why doesn't this code work?
+
+::: callout-note
+There might be more than one problem...
+:::
+
+```{r}
+#| echo: true
+#| eval: false
+average_age_firstrepro(2019, "male")
+```
+
